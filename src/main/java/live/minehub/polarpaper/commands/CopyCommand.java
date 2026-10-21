@@ -4,8 +4,8 @@ import com.mojang.brigadier.Command;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import com.mojang.brigadier.context.CommandContext;
-import io.papermc.paper.command.brigadier.CommandSourceStack;
-import io.papermc.paper.command.brigadier.Commands;
+import net.minecraft.commands.CommandSourceStack;
+import net.minecraft.commands.Commands;
 import live.minehub.polarpaper.Polar;
 import live.minehub.polarpaper.core.generator.PolarGenerator;
 import live.minehub.polarpaper.core.source.FilePolarSource;
@@ -17,7 +17,7 @@ import net.kyori.adventure.text.event.ClickEvent;
 import net.kyori.adventure.text.event.HoverEvent;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.TextDecoration;
-import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceLocation;
 import org.bukkit.World;
 import org.bukkit.command.CommandSender;
 
@@ -31,9 +31,9 @@ public class CopyCommand extends PolarCmd {
     }
 
     public static int run(CommandContext<CommandSourceStack> ctx) {
-        CommandSender sender = ctx.getSource().getSender();
+        CommandSender sender = ctx.getSource().getBukkitSender();
 
-        Identifier worldId = ctx.getArgument("world name", Identifier.class);
+        ResourceLocation worldId = ctx.getArgument("world name", ResourceLocation.class);
         String newWorldPath = ctx.getArgument("new world path", String.class);
 
         Path path = WorldKey.validatePath(sender, newWorldPath);
@@ -47,7 +47,7 @@ public class CopyCommand extends PolarCmd {
 
         World bukkitWorld = WorldKey.getWorld(worldId);
         if (bukkitWorld == null) {
-            ctx.getSource().getSender().sendMessage(
+            ctx.getSource().getBukkitSender().sendMessage(
                     Component.text()
                             .append(Component.text("'", NamedTextColor.RED))
                             .append(Component.text(worldId.getPath(), NamedTextColor.RED))
@@ -58,7 +58,7 @@ public class CopyCommand extends PolarCmd {
 
         PolarGenerator polarGenerator = PolarGenerator.fromWorld(bukkitWorld);
         if (polarGenerator == null) {
-            ctx.getSource().getSender().sendMessage(
+            ctx.getSource().getBukkitSender().sendMessage(
                     Component.text()
                             .append(Component.text("'", NamedTextColor.RED))
                             .append(Component.text(worldId.getPath(), NamedTextColor.RED))
@@ -116,7 +116,7 @@ public class CopyCommand extends PolarCmd {
 
     @Override
     protected int executeDefault(CommandContext<CommandSourceStack> ctx) {
-        ctx.getSource().getSender().sendMessage(
+        ctx.getSource().getBukkitSender().sendMessage(
                 Component.text()
                         .append(Component.text("Usage: /polar copy <world name> <new world path> to copy a polar world\nNote: the world will be saved before copying", NamedTextColor.RED))
         );

@@ -1,33 +1,7 @@
 package live.minehub.polarpaper.core.util;
 
-import net.minecraft.world.level.chunk.Configuration;
-import net.minecraft.world.level.chunk.Strategy;
-
-import java.lang.invoke.MethodHandle;
-import java.lang.invoke.MethodHandles;
-import java.lang.invoke.MethodType;
-
 public final class PaletteUtil {
     private PaletteUtil() {}
-
-    private static final MethodHandle GET_CONFIGURATION_HANDLE;
-    static {
-        try {
-            GET_CONFIGURATION_HANDLE = MethodHandles
-                    .privateLookupIn(Strategy.class, MethodHandles.lookup())
-                    .findVirtual(Strategy.class, "getConfigurationForBitCount", MethodType.methodType(Configuration.class, int.class));
-        } catch (NoSuchMethodException | IllegalAccessException e) {
-            throw new RuntimeException(e);
-        }
-    }
-
-    public static Configuration getConfigurationForBitCount(Strategy<?> strategy, int bits) {
-        try {
-            return (Configuration) GET_CONFIGURATION_HANDLE.invokeExact(strategy, bits);
-        } catch (Throwable e) {
-            throw new RuntimeException(e);
-        }
-    }
 
     public static int bitsToRepresent(int n) {
         if (n <= 0) throw new IllegalArgumentException("n must be greater than zero");

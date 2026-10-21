@@ -1,7 +1,7 @@
 package live.minehub.polarpaper.core.world;
 
-import ca.spottedleaf.moonrise.patches.chunk_system.scheduling.ChunkHolderManager;
-import ca.spottedleaf.moonrise.patches.chunk_system.scheduling.NewChunkHolder;
+import io.papermc.paper.chunk.system.scheduling.ChunkHolderManager;
+import io.papermc.paper.chunk.system.scheduling.NewChunkHolder;
 import dev.hallock.zstd.Zstd;
 import live.minehub.polarpaper.core.config.Config;
 import live.minehub.polarpaper.core.source.PolarSource;
@@ -10,7 +10,7 @@ import live.minehub.polarpaper.core.util.MemorySegmentWriter;
 import live.minehub.polarpaper.core.util.PaletteUtil;
 import net.minecraft.nbt.NbtIo;
 import org.bukkit.World;
-import org.bukkit.craftbukkit.CraftWorld;
+import org.bukkit.craftbukkit.v1_20_R1.CraftWorld;
 import org.jetbrains.annotations.Nullable;
 import org.joml.Vector2i;
 
@@ -77,7 +77,7 @@ public class PolarWriter {
             }
             selector.forEachChunk(pos -> positions.add(new Vector2i(pos)));
 
-            ChunkHolderManager manager = ((CraftWorld) world).getHandle().moonrise$getChunkTaskScheduler().chunkHolderManager;
+            ChunkHolderManager manager = ((CraftWorld) world).getHandle().chunkTaskScheduler.chunkHolderManager;
             for (NewChunkHolder holder : manager.getChunkHolders()) {
                 if (selector.testChunk(holder.chunkX, holder.chunkZ)) positions.add(new Vector2i(holder.chunkX, holder.chunkZ));
             }
@@ -231,7 +231,7 @@ public class PolarWriter {
         writer.writeByte((byte) (blockEntity.data() == null ? 0 : 1));
         if (blockEntity.data() != null) {
             try {
-                NbtIo.writeAnyTag(blockEntity.data(), writer);
+                live.minehub.polarpaper.core.util.LegacyNbt.writeAnyTag(blockEntity.data(), writer);
             } catch (IOException e) {
                 throw new RuntimeException(e);
             }

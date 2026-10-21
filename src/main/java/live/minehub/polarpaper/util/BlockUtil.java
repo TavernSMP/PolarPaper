@@ -1,7 +1,7 @@
 package live.minehub.polarpaper.util;
 
-import ca.spottedleaf.moonrise.patches.chunk_system.scheduling.ChunkHolderManager;
-import ca.spottedleaf.moonrise.patches.chunk_system.scheduling.NewChunkHolder;
+import io.papermc.paper.chunk.system.scheduling.ChunkHolderManager;
+import io.papermc.paper.chunk.system.scheduling.NewChunkHolder;
 import live.minehub.polarpaper.core.util.CoordConversion;
 import live.minehub.polarpaper.core.world.PolarChunk;
 import live.minehub.polarpaper.schematic.Rotation;
@@ -11,12 +11,11 @@ import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.chunk.ChunkAccess;
 import net.minecraft.world.level.chunk.LevelChunkSection;
-import net.minecraft.world.level.chunk.PaletteResize;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.World;
-import org.bukkit.craftbukkit.CraftServer;
-import org.bukkit.craftbukkit.CraftWorld;
+import org.bukkit.craftbukkit.v1_20_R1.CraftServer;
+import org.bukkit.craftbukkit.v1_20_R1.CraftWorld;
 import org.jetbrains.annotations.Nullable;
 import org.joml.Vector3d;
 import org.joml.Vector3i;
@@ -30,7 +29,7 @@ public class BlockUtil {
     public static void setBlockFast(World world, int x, int y, int z, BlockState blockState) {
         CraftWorld craftWorld = (CraftWorld) world;
         ServerLevel serverLevel = craftWorld.getHandle();
-        ChunkHolderManager chunkHolderManager = serverLevel.moonrise$getChunkTaskScheduler().chunkHolderManager;
+        ChunkHolderManager chunkHolderManager = serverLevel.chunkTaskScheduler.chunkHolderManager;
 
         int chunkX = (int)Math.floor(x / 16.0);
         int chunkZ = (int)Math.floor(z / 16.0);
@@ -41,7 +40,7 @@ public class BlockUtil {
         ChunkAccess chunkAccess = chunkHolder.getCurrentChunk();
         if (chunkAccess == null) return;
 
-        int sectionI = section - chunkAccess.getMinSectionY();
+        int sectionI = section - chunkAccess.getMinSection();
         if (sectionI >= chunkAccess.getSections().length) return;
         if (sectionI < 0) return;
 
@@ -59,7 +58,7 @@ public class BlockUtil {
     public static @Nullable BlockState getBlockFast(World world, int x, int y, int z) {
         CraftWorld craftWorld = (CraftWorld) world;
         ServerLevel serverLevel = craftWorld.getHandle();
-        ChunkHolderManager chunkHolderManager = serverLevel.moonrise$getChunkTaskScheduler().chunkHolderManager;
+        ChunkHolderManager chunkHolderManager = serverLevel.chunkTaskScheduler.chunkHolderManager;
 
         int chunkX = (int)Math.floor(x / 16.0);
         int chunkZ = (int)Math.floor(z / 16.0);
@@ -70,7 +69,7 @@ public class BlockUtil {
         ChunkAccess chunkAccess = chunkHolder.getCurrentChunk();
         if (chunkAccess == null) return null;
 
-        int sectionI = section - chunkAccess.getMinSectionY();
+        int sectionI = section - chunkAccess.getMinSection();
         if (sectionI >= chunkAccess.getSections().length) return null;
         if (sectionI < 0) return null;
 
@@ -92,7 +91,7 @@ public class BlockUtil {
     public static List<Vector3i> findBlocks(World world, BlockState blockState) {
         CraftWorld craftWorld = (CraftWorld) world;
         ServerLevel serverLevel = craftWorld.getHandle();
-        ChunkHolderManager chunkHolderManager = serverLevel.moonrise$getChunkTaskScheduler().chunkHolderManager;
+        ChunkHolderManager chunkHolderManager = serverLevel.chunkTaskScheduler.chunkHolderManager;
 
         List<Vector3i> structureVoidPositions = new ArrayList<>();
         for (NewChunkHolder chunkHolder : chunkHolderManager.getChunkHolders()) {
@@ -110,7 +109,7 @@ public class BlockUtil {
     public static List<Vector3i> findBlocks(World world, int chunkX, int chunkZ, BlockState blockState) {
         CraftWorld craftWorld = (CraftWorld) world;
         ServerLevel serverLevel = craftWorld.getHandle();
-        ChunkHolderManager chunkHolderManager = serverLevel.moonrise$getChunkTaskScheduler().chunkHolderManager;
+        ChunkHolderManager chunkHolderManager = serverLevel.chunkTaskScheduler.chunkHolderManager;
 
         List<Vector3i> blockPositions = new ArrayList<>();
 
@@ -119,7 +118,7 @@ public class BlockUtil {
         ChunkAccess chunkAccess = chunkHolder.getCurrentChunk();
         if (chunkAccess == null) return blockPositions;
 
-        int sectionY = chunkAccess.getMinSectionY();
+        int sectionY = chunkAccess.getMinSection();
         for (LevelChunkSection section : chunkAccess.getSections()) {
             if (section.hasOnlyAir()) {
                 sectionY++;
@@ -132,24 +131,14 @@ public class BlockUtil {
                 continue;
             }
 
-            int structureVoidId = section.getStates().data.palette().idFor(blockState, PaletteResize.noResizeExpected());
-            int finalSectionY = sectionY;
-            section.getStates().data.storage().getAll(new IntConsumer() {
-                int i = 0;
-
-                @Override
-                public void accept(int n) {
-                    if (n == structureVoidId) {
-                        Vector3i vec = new Vector3i(
-                                CoordConversion.sectionBlockIndexGetX(i) + chunkAccess.locX * 16,
-                                CoordConversion.sectionBlockIndexGetY(i) + finalSectionY * 16,
-                                CoordConversion.sectionBlockIndexGetZ(i) + chunkAccess.locZ * 16
-                        );
-                        blockPositions.add(vec);
-                    }
-                    i++;
+            for (int i = 0; i < 4096; i++) {
+                if (section.getStates().get(i) == blockState) {
+                    blockPositions.add(new Vector3i(
+                            CoordConversion.sectionBlockIndexGetX(i) + chunkAccess.locX * 16,
+                            CoordConversion.sectionBlockIndexGetY(i) + sectionY * 16,
+                            CoordConversion.sectionBlockIndexGetZ(i) + chunkAccess.locZ * 16));
                 }
-            });
+            }
 
             sectionY++;
         }
@@ -162,7 +151,7 @@ public class BlockUtil {
 
         CraftWorld craftWorld = (CraftWorld) world;
         ServerLevel serverLevel = craftWorld.getHandle();
-        ChunkHolderManager chunkHolderManager = serverLevel.moonrise$getChunkTaskScheduler().chunkHolderManager;
+        ChunkHolderManager chunkHolderManager = serverLevel.chunkTaskScheduler.chunkHolderManager;
 
         int chunkX = (int)Math.floor(x / 16.0);
         int chunkZ = (int)Math.floor(z / 16.0);
@@ -177,7 +166,7 @@ public class BlockUtil {
         blockEntity.data().putInt("z", z);
 
         var registryAccess = ((CraftServer) Bukkit.getServer()).getServer().registryAccess();
-        BlockEntity nmsBlockEntity = BlockEntity.loadStatic(new BlockPos(x, y, z), chunkAccess.getBlockState(x, y, z), blockEntity.data(), registryAccess);
+        BlockEntity nmsBlockEntity = BlockEntity.loadStatic(new BlockPos(x, y, z), chunkAccess.getBlockState(x, y, z), blockEntity.data());
         if (nmsBlockEntity == null) return;
         serverLevel.getChunk(chunkX, chunkZ).addAndRegisterBlockEntity(nmsBlockEntity);
     }

@@ -3,14 +3,14 @@ package live.minehub.polarpaper.commands;
 import com.mojang.brigadier.Command;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import com.mojang.brigadier.context.CommandContext;
-import io.papermc.paper.command.brigadier.CommandSourceStack;
+import net.minecraft.commands.CommandSourceStack;
 import live.minehub.polarpaper.PolarPaper;
 import live.minehub.polarpaper.core.generator.PolarGenerator;
 import live.minehub.polarpaper.core.source.PolarSource;
 import live.minehub.polarpaper.util.WorldKey;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
-import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceLocation;
 import org.bukkit.World;
 import org.bukkit.command.CommandSender;
 
@@ -21,9 +21,9 @@ public class ReloadCommand extends PolarCmd {
     }
 
     private static int run(CommandContext<CommandSourceStack> ctx) {
-        Identifier worldId = ctx.getArgument("world name", Identifier.class);
+        ResourceLocation worldId = ctx.getArgument("world name", ResourceLocation.class);
 
-        CommandSender sender = ctx.getSource().getSender();
+        CommandSender sender = ctx.getSource().getBukkitSender();
 
         World bukkitWorld = WorldKey.getWorld(worldId);
         PolarGenerator generator = PolarGenerator.fromWorld(bukkitWorld);
@@ -43,7 +43,7 @@ public class ReloadCommand extends PolarCmd {
             return Command.SINGLE_SUCCESS;
         }
 
-        String newWorldName = bukkitWorld.getKey().toString().replace(PolarPaper.getPlugin().namespace() + ":", "");
+        String newWorldName = bukkitWorld.getKey().toString().replace(PolarPaper.getPlugin().getName().toLowerCase(java.util.Locale.ROOT) + ":", "");
 
         UnloadCommand.unload(ctx, worldId, false, false).thenAccept(success -> {
             if (!success) return;
@@ -56,7 +56,7 @@ public class ReloadCommand extends PolarCmd {
 
     @Override
     protected int executeDefault(CommandContext<CommandSourceStack> ctx) {
-        ctx.getSource().getSender().sendMessage(
+        ctx.getSource().getBukkitSender().sendMessage(
                 Component.text()
                         .append(Component.text("Usage: /polar reload <worldname>", NamedTextColor.RED))
         );

@@ -5,8 +5,8 @@ import com.mojang.brigadier.arguments.IntegerArgumentType;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import com.mojang.brigadier.context.CommandContext;
-import io.papermc.paper.command.brigadier.CommandSourceStack;
-import io.papermc.paper.command.brigadier.Commands;
+import net.minecraft.commands.CommandSourceStack;
+import net.minecraft.commands.Commands;
 import live.minehub.polarpaper.PolarPaper;
 import live.minehub.polarpaper.core.generator.PolarGenerator;
 import live.minehub.polarpaper.util.Format;
@@ -40,7 +40,7 @@ public class BrowseCommand extends PolarCmd {
     }
 
     public int execute(CommandContext<CommandSourceStack> ctx, Path parent, int page) {
-        boolean isConsole = ctx.getSource().getSender() instanceof ConsoleCommandSender;
+        boolean isConsole = ctx.getSource().getBukkitSender() instanceof ConsoleCommandSender;
 
         TextComponent.Builder builder = Component.text();
 
@@ -49,12 +49,12 @@ public class BrowseCommand extends PolarCmd {
         Path worldsFolder = PolarPaper.getWorldsPath();
 
         if (WorldKey.isOutsideWorldsFolder(parent)) {
-            ctx.getSource().getSender().sendMessage(Component.text("Outside of worlds folder", NamedTextColor.RED));
+            ctx.getSource().getBukkitSender().sendMessage(Component.text("Outside of worlds folder", NamedTextColor.RED));
             return Command.SINGLE_SUCCESS;
         }
 
         if (!Files.exists(parent)) {
-            ctx.getSource().getSender().sendMessage(Component.text("File '" + parent.getFileName() + "' does not exist", NamedTextColor.RED));
+            ctx.getSource().getBukkitSender().sendMessage(Component.text("File '" + parent.getFileName() + "' does not exist", NamedTextColor.RED));
             return Command.SINGLE_SUCCESS;
         }
 
@@ -125,7 +125,7 @@ public class BrowseCommand extends PolarCmd {
             builder.append(Component.text(fileName, color));
 
             if (bukkitWorld == null) {
-                if (ctx.getSource().getSender().hasPermission("polarpaper.load") && !isConsole) {
+                if (ctx.getSource().getBukkitSender().hasPermission("polarpaper.load") && !isConsole) {
                     builder.appendSpace();
                     builder.appendSpace();
                     builder.append(Component.text("ʟᴏᴀᴅ", NamedTextColor.GREEN)
@@ -135,7 +135,7 @@ public class BrowseCommand extends PolarCmd {
                 continue;
             }
 
-            if (ctx.getSource().getSender().hasPermission("polarpaper.goto") && !isConsole) {
+            if (ctx.getSource().getBukkitSender().hasPermission("polarpaper.goto") && !isConsole) {
                 builder.appendSpace();
                 builder.appendSpace();
                 builder.append(Component.text("ɢᴏᴛᴏ", NamedTextColor.AQUA)
@@ -176,7 +176,7 @@ public class BrowseCommand extends PolarCmd {
             }
         }
 
-        ctx.getSource().getSender().sendMessage(((AbstractBuilder<TextComponent>)builder).build());
+        ctx.getSource().getBukkitSender().sendMessage(((AbstractBuilder<TextComponent>)builder).build());
 
         return Command.SINGLE_SUCCESS;
     }

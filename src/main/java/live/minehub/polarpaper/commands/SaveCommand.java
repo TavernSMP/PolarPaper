@@ -3,14 +3,14 @@ package live.minehub.polarpaper.commands;
 import com.mojang.brigadier.Command;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import com.mojang.brigadier.context.CommandContext;
-import io.papermc.paper.command.brigadier.CommandSourceStack;
+import net.minecraft.commands.CommandSourceStack;
 import live.minehub.polarpaper.Polar;
 import live.minehub.polarpaper.PolarPaper;
 import live.minehub.polarpaper.core.generator.PolarGenerator;
 import live.minehub.polarpaper.util.WorldKey;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
-import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceLocation;
 import org.bukkit.Bukkit;
 import org.bukkit.World;
 import org.bukkit.command.CommandSender;
@@ -27,8 +27,8 @@ public class SaveCommand extends PolarCmd {
         super("save", "Save the polar world");
     }
 
-    protected static CompletableFuture<Boolean> saveWorld(CommandContext<CommandSourceStack> ctx, Identifier worldId) {
-        CommandSender sender = ctx.getSource().getSender();
+    protected static CompletableFuture<Boolean> saveWorld(CommandContext<CommandSourceStack> ctx, ResourceLocation worldId) {
+        CommandSender sender = ctx.getSource().getBukkitSender();
 
         World bukkitWorld = WorldKey.getWorld(worldId);
         if (bukkitWorld == null) {
@@ -86,14 +86,14 @@ public class SaveCommand extends PolarCmd {
     }
 
     private static int run(CommandContext<CommandSourceStack> ctx) {
-        Identifier worldId = ctx.getArgument("world name", Identifier.class);
+        ResourceLocation worldId = ctx.getArgument("world name", ResourceLocation.class);
         saveWorld(ctx, worldId);
         return Command.SINGLE_SUCCESS;
     }
 
     @Override
     protected int executeDefault(CommandContext<CommandSourceStack> ctx) {
-        ctx.getSource().getSender().sendMessage(
+        ctx.getSource().getBukkitSender().sendMessage(
                 Component.text()
                         .append(Component.text("Usage: /polar save <worldname>", NamedTextColor.RED))
         );

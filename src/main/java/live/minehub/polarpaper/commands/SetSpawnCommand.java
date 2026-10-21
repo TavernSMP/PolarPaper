@@ -3,8 +3,8 @@ package live.minehub.polarpaper.commands;
 import com.mojang.brigadier.Command;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import com.mojang.brigadier.context.CommandContext;
-import io.papermc.paper.command.brigadier.CommandSourceStack;
-import io.papermc.paper.command.brigadier.Commands;
+import net.minecraft.commands.CommandSourceStack;
+import net.minecraft.commands.Commands;
 import live.minehub.polarpaper.PolarPaper;
 import live.minehub.polarpaper.core.config.Config;
 import live.minehub.polarpaper.core.generator.PolarGenerator;
@@ -24,9 +24,9 @@ public class SetSpawnCommand extends PolarCmd {
     }
 
     private int execute(CommandContext<CommandSourceStack> ctx, boolean rounded) {
-        CommandSender sender = ctx.getSource().getSender();
+        CommandSender sender = ctx.getSource().getBukkitSender();
         if (!(sender instanceof Player player)) {
-            ctx.getSource().getSender().sendMessage(
+            ctx.getSource().getBukkitSender().sendMessage(
                     Component.text()
                             .append(Component.text("Usage: /polar setspawn (while in a polar world)", NamedTextColor.RED))
             );
@@ -37,7 +37,7 @@ public class SetSpawnCommand extends PolarCmd {
 
         PolarGenerator polarGenerator = PolarGenerator.fromWorld(bukkitWorld);
         if (polarGenerator == null) {
-            ctx.getSource().getSender().sendMessage(
+            ctx.getSource().getBukkitSender().sendMessage(
                     Component.text()
                             .append(Component.text("World '", NamedTextColor.RED))
                             .append(Component.text(bukkitWorld.getName(), NamedTextColor.RED))
@@ -63,7 +63,7 @@ public class SetSpawnCommand extends PolarCmd {
 
             bukkitWorld.setSpawnLocation(spawnPos);
 
-            ctx.getSource().getSender().sendMessage(
+            ctx.getSource().getBukkitSender().sendMessage(
                     Component.text()
                             .append(Component.text("Set spawn for ", NamedTextColor.AQUA))
                             .append(Component.text(bukkitWorld.getName(), NamedTextColor.AQUA))

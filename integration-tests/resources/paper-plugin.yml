@@ -1,0 +1,10 @@
+name: PolarPaperAcceptance
+version: '1.0'
+main: live.minehub.polarpaper.acceptance.AcceptancePlugin
+api-version: '1.20'
+dependencies:
+  server:
+    polarpaper:
+      load: BEFORE
+      required: true
+      join-classpath: true

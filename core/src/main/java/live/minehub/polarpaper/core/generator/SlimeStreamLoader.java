@@ -1,6 +1,6 @@
 package live.minehub.polarpaper.core.generator;
 
-import ca.spottedleaf.moonrise.patches.starlight.light.SWMRNibbleArray;
+import ca.spottedleaf.starlight.common.light.SWMRNibbleArray;
 import live.minehub.polarpaper.core.config.Config;
 import live.minehub.polarpaper.core.source.FilePolarSource;
 import live.minehub.polarpaper.core.source.PolarSource;
@@ -21,7 +21,7 @@ import net.minecraft.world.level.chunk.UpgradeData;
 import net.minecraft.world.ticks.LevelChunkTicks;
 import org.bukkit.Location;
 import org.bukkit.World;
-import org.bukkit.craftbukkit.CraftWorld;
+import org.bukkit.craftbukkit.v1_20_R1.CraftWorld;
 import org.jetbrains.annotations.Contract;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
@@ -106,6 +106,7 @@ public class SlimeStreamLoader extends PolarGenerator {
                 validateVersion(version);
 
                 this.dataVersion = reader.readInt();
+                dataConverter.validateDataVersion(this.dataVersion);
 
                 var worldFlags = reader.readUnsignedByte();
                 this.poiChunks = (worldFlags & 1) == 1;
@@ -168,7 +169,7 @@ public class SlimeStreamLoader extends PolarGenerator {
         // heightmaps
         try {
             int length = reader.readInt();
-            NbtIo.readUnnamedTag(reader, NbtAccounter.uncompressedQuota());
+            live.minehub.polarpaper.core.util.LegacyNbt.readUnnamedTag(reader, NbtAccounter.UNLIMITED);
         } catch (IOException e) {
             return CompletableFuture.failedFuture(e);
         }
@@ -176,7 +177,7 @@ public class SlimeStreamLoader extends PolarGenerator {
         if (poiChunks) {
             try {
                 int length = reader.readInt();
-                NbtIo.readUnnamedTag(reader, NbtAccounter.uncompressedQuota());
+                live.minehub.polarpaper.core.util.LegacyNbt.readUnnamedTag(reader, NbtAccounter.UNLIMITED);
             } catch (IOException e) {
                 return CompletableFuture.failedFuture(e);
             }
@@ -184,7 +185,7 @@ public class SlimeStreamLoader extends PolarGenerator {
         if (blockTicks) {
             try {
                 int length = reader.readInt();
-                NbtIo.readUnnamedTag(reader, NbtAccounter.uncompressedQuota());
+                live.minehub.polarpaper.core.util.LegacyNbt.readUnnamedTag(reader, NbtAccounter.UNLIMITED);
             } catch (IOException e) {
                 return CompletableFuture.failedFuture(e);
             }
@@ -192,7 +193,7 @@ public class SlimeStreamLoader extends PolarGenerator {
         if (fluidTicks) {
             try {
                 int length = reader.readInt();
-                NbtIo.readUnnamedTag(reader, NbtAccounter.uncompressedQuota());
+                live.minehub.polarpaper.core.util.LegacyNbt.readUnnamedTag(reader, NbtAccounter.UNLIMITED);
             } catch (IOException e) {
                 return CompletableFuture.failedFuture(e);
             }
@@ -203,10 +204,10 @@ public class SlimeStreamLoader extends PolarGenerator {
 
         try {
             int length = reader.readInt();
-            Tag tileEntities = NbtIo.readUnnamedTag(reader, NbtAccounter.uncompressedQuota());
+            Tag tileEntities = live.minehub.polarpaper.core.util.LegacyNbt.readUnnamedTag(reader, NbtAccounter.UNLIMITED);
             if (tileEntities instanceof CompoundTag tag) {
-                for (Tag entities : tag.getListOrEmpty("tileEntities")) {
-                    CompoundTag entityCompound = entities.asCompound().orElse(null);
+                for (Tag entities : tag.getList("tileEntities", Tag.TAG_COMPOUND)) {
+                    CompoundTag entityCompound = (entities instanceof CompoundTag compound ? compound : null);
                     if (entityCompound == null) continue;
                     ChunkUtils.addBlockEntity(entityCompound, newLevelChunk);
                 }
@@ -219,18 +220,18 @@ public class SlimeStreamLoader extends PolarGenerator {
 
         try {
             int length = reader.readInt();
-            Tag entities = NbtIo.readUnnamedTag(reader, NbtAccounter.uncompressedQuota());
+            Tag entities = live.minehub.polarpaper.core.util.LegacyNbt.readUnnamedTag(reader, NbtAccounter.UNLIMITED);
             if (entities instanceof CompoundTag tag) {
-                for (Tag entitiesTag : tag.getListOrEmpty("entities")) {
-                    CompoundTag entityCompound = entitiesTag.asCompound().orElse(null);
+                for (Tag entitiesTag : tag.getList("entities", Tag.TAG_COMPOUND)) {
+                    CompoundTag entityCompound = (entitiesTag instanceof CompoundTag compound ? compound : null);
                     if (entityCompound == null) continue;
-                    ListTag posCompound = entityCompound.getList("Pos").orElse(null);
+                    ListTag posCompound = entityCompound.getList("Pos", Tag.TAG_DOUBLE);
                     if (posCompound == null) continue;
                     entityCompound.putInt("DataVersion", dataVersion);
-                    Location spawnLocation = new Location(world, posCompound.getDoubleOr(0, 0.0), posCompound.getDoubleOr(1, 0.0), posCompound.getDoubleOr(2, 0.0));
+                    Location spawnLocation = new Location(world, posCompound.getDouble(0), posCompound.getDouble(1), posCompound.getDouble(2));
                     net.minecraft.world.entity.Entity entity = PolarEntity.toNMSEntity(this.entitySerializer, world, spawnLocation, entityCompound);
                     if (entity == null) continue;
-                    successEntities.add(entity);
+                    successEntities.addAll(entity.getSelfAndPassengers().toList());
                 }
             }
         } catch (IOException e) {
@@ -240,7 +241,7 @@ public class SlimeStreamLoader extends PolarGenerator {
         // extra tag
         try {
             int length = reader.readInt();
-            NbtIo.readUnnamedTag(reader, NbtAccounter.uncompressedQuota());
+            live.minehub.polarpaper.core.util.LegacyNbt.readUnnamedTag(reader, NbtAccounter.UNLIMITED);
         } catch (IOException e) {
             return CompletableFuture.failedFuture(e);
         }
@@ -249,15 +250,15 @@ public class SlimeStreamLoader extends PolarGenerator {
 
         return TaskFutures.runRegion(getWorldAccess().getPlugin(), world, chunkX, chunkZ, () -> {
             if (finalLightPresent) {
-                newLevelChunk.starlight$setBlockEmptinessMap(emptinessMap);
-                newLevelChunk.starlight$setSkyEmptinessMap(emptinessMap);
-                newLevelChunk.starlight$setSkyNibbles(skyNibbles);
-                newLevelChunk.starlight$setBlockNibbles(blockNibbles);
+                newLevelChunk.setBlockEmptinessMap(emptinessMap);
+                newLevelChunk.setSkyEmptinessMap(emptinessMap);
+                newLevelChunk.setSkyNibbles(skyNibbles);
+                newLevelChunk.setBlockNibbles(blockNibbles);
             } else {
                 ChunkUtils.lightChunk(serverLevel, newLevelChunk);
             }
             ChunkUtils.insertChunk(serverLevel, newLevelChunk);
-            serverLevel.moonrise$getEntityLookup().addEntityChunkEntities(successEntities, newLevelChunk.getPos());
+            serverLevel.getEntityLookup().addEntityChunkEntities(successEntities);
             // TODO: load userdata
 
             return null;
@@ -287,9 +288,9 @@ public class SlimeStreamLoader extends PolarGenerator {
         long[] blockData = null;
         try {
             int length = reader.readInt();
-            Tag blockStates = NbtIo.readUnnamedTag(reader, NbtAccounter.uncompressedQuota());
+            Tag blockStates = live.minehub.polarpaper.core.util.LegacyNbt.readUnnamedTag(reader, NbtAccounter.UNLIMITED);
             if (blockStates instanceof CompoundTag tagg) {
-                ListTag paletteList = tagg.getListOrEmpty("palette");
+                ListTag paletteList = tagg.getList("palette", Tag.TAG_COMPOUND);
                 blockPalette = new String[paletteList.size()];
                 int i = 0;
                 for (Tag tag : paletteList) {
@@ -302,7 +303,7 @@ public class SlimeStreamLoader extends PolarGenerator {
                 }
 
                 if (blockPalette.length > 1) {
-                    blockData = tagg.getLongArray("data").orElse(null);
+                    blockData = tagg.getLongArray("data");
                 }
             } else {
                 blockPalette = new String[] { "minecraft:air" };
@@ -315,18 +316,18 @@ public class SlimeStreamLoader extends PolarGenerator {
         long[] biomeData = null;
         try {
             int length = reader.readInt();
-            Tag biomes = NbtIo.readUnnamedTag(reader, NbtAccounter.uncompressedQuota());
+            Tag biomes = live.minehub.polarpaper.core.util.LegacyNbt.readUnnamedTag(reader, NbtAccounter.UNLIMITED);
             if (biomes instanceof CompoundTag tagg) {
-                ListTag paletteList = tagg.getListOrEmpty("palette");
+                ListTag paletteList = tagg.getList("palette", Tag.TAG_STRING);
                 biomePalette = new String[paletteList.size()];
                 int i = 0;
                 for (Tag tag : paletteList) {
-                    if (!(tag instanceof StringTag(String value))) continue;
-                    biomePalette[i++] = value;
+                    if (!(tag instanceof StringTag stringTag)) continue;
+                    biomePalette[i++] = stringTag.getAsString();
                 }
 
                 if (biomePalette.length > 1) {
-                    biomeData = tagg.getLongArray("data").orElse(null);
+                    biomeData = tagg.getLongArray("data");
                 }
             }
         } catch (IOException e) {
@@ -346,27 +347,28 @@ public class SlimeStreamLoader extends PolarGenerator {
      * to a palette string (e.g. <code>minecraft:birch_leaves[distance=7,persistent=true,waterlogged=false]</code>)
      */
     private static @Nullable String compoundToPaletteEntry(CompoundTag compound) {
-        String name = compound.getString("Name").orElse(null);
+        String name = compound.getString("Name");
         if (name == null) return null;
 
         StringBuilder sb = new StringBuilder();
         sb.append(name);
 
-        CompoundTag properties = compound.getCompound("Properties").orElse(null);
+        CompoundTag properties = compound.getCompound("Properties");
         if (properties == null) return sb.toString();
         sb.append("[");
-        properties.forEach(new BiConsumer<>() {
+        properties.getAllKeys().forEach(new java.util.function.Consumer<>() {
             boolean first = true;
 
             @Override
-            public void accept(String key, Tag value) {
+            public void accept(String key) {
+                Tag value = properties.get(key);
                 if (!first) sb.append(",");
                 first = false;
 
                 sb.append(key);
                 sb.append("=");
-                if (value instanceof StringTag(String value1)) {
-                    sb.append(value1);
+                if (value instanceof StringTag stringTag) {
+                    sb.append(stringTag.getAsString());
                 } else {
                     sb.append(value);
                 }

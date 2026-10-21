@@ -1,12 +1,12 @@
 package live.minehub.polarpaper.core.world;
 
-import ca.spottedleaf.moonrise.patches.chunk_system.scheduling.ChunkHolderManager;
-import ca.spottedleaf.moonrise.patches.chunk_system.scheduling.NewChunkHolder;
+import io.papermc.paper.chunk.system.scheduling.ChunkHolderManager;
+import io.papermc.paper.chunk.system.scheduling.NewChunkHolder;
 import live.minehub.polarpaper.core.util.CoordConversion;
 import net.minecraft.SharedConstants;
 import net.minecraft.server.level.ServerLevel;
 import org.bukkit.World;
-import org.bukkit.craftbukkit.CraftWorld;
+import org.bukkit.craftbukkit.v1_20_R1.CraftWorld;
 import org.jetbrains.annotations.Nullable;
 import org.joml.Vector2i;
 import org.slf4j.Logger;
@@ -33,11 +33,11 @@ public class PolarWorld {
     private final Map<Long, PolarChunk> chunks = new ConcurrentHashMap<>();
 
     public PolarWorld(byte minSection, byte maxSection) {
-        this(PolarConstants.LATEST_VERSION, SharedConstants.getCurrentVersion().dataVersion().version(), minSection, maxSection, new byte[0], List.of());
+        this(PolarConstants.LATEST_VERSION, SharedConstants.getCurrentVersion().getDataVersion().getVersion(), minSection, maxSection, new byte[0], List.of());
     }
 
     public PolarWorld(byte minSection, byte maxSection, List<PolarChunk> chunks) {
-        this(PolarConstants.LATEST_VERSION, SharedConstants.getCurrentVersion().dataVersion().version(), minSection, maxSection, new byte[0], chunks);
+        this(PolarConstants.LATEST_VERSION, SharedConstants.getCurrentVersion().getDataVersion().getVersion(), minSection, maxSection, new byte[0], chunks);
     }
 
     public PolarWorld(
@@ -208,7 +208,7 @@ public class PolarWorld {
         List<PolarChunk> chunks = new ArrayList<>();
 
         ServerLevel serverLevel = ((CraftWorld) world).getHandle();
-        ChunkHolderManager chunkHolderManager = serverLevel.moonrise$getChunkTaskScheduler().chunkHolderManager;
+        ChunkHolderManager chunkHolderManager = serverLevel.chunkTaskScheduler.chunkHolderManager;
 
         for (PolarChunk chunk : includedChunks) {
             if (!blockSelector.testChunk(chunk.x(), chunk.z())) continue;

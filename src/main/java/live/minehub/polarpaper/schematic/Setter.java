@@ -15,8 +15,8 @@ import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.block.state.BlockState;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
-import org.bukkit.craftbukkit.CraftWorld;
-import org.bukkit.craftbukkit.entity.CraftEntity;
+import org.bukkit.craftbukkit.v1_20_R1.CraftWorld;
+import org.bukkit.craftbukkit.v1_20_R1.entity.CraftEntity;
 import org.joml.Vector2i;
 import org.joml.Vector3i;
 
@@ -102,7 +102,7 @@ public interface Setter {
             ServerLevel serverLevel = craftWorld.getHandle();
 
             // relight chunks and resend blocks to client
-            serverLevel.getChunkSource().getLightEngine().starlight$serverRelightChunks(vecsToChunkPos(chunksToRefresh), _ -> {}, _ -> {});
+            serverLevel.getChunkSource().getLightEngine().relight(new java.util.HashSet<>(vecsToChunkPos(chunksToRefresh)),  _ -> {}, _ -> {});
             for (Vector2i c : chunksToRefresh) {
                 Bukkit.getRegionScheduler().execute(PolarPaper.getPlugin(), world, c.x(), c.y(), () -> {
                     world.refreshChunk(c.x(), c.y());

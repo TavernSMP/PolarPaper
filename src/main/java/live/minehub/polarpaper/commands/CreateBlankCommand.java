@@ -4,8 +4,8 @@ import com.mojang.brigadier.Command;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import com.mojang.brigadier.context.CommandContext;
-import io.papermc.paper.command.brigadier.CommandSourceStack;
-import io.papermc.paper.command.brigadier.Commands;
+import net.minecraft.commands.CommandSourceStack;
+import net.minecraft.commands.Commands;
 import live.minehub.polarpaper.Polar;
 import live.minehub.polarpaper.PolarPaper;
 import live.minehub.polarpaper.core.config.Config;
@@ -32,12 +32,12 @@ public class CreateBlankCommand extends PolarCmd {
         String worldName = ctx.getArgument("new world name", String.class);
 
         // worldName becomes a file name, so it must not be able to go outside the worlds folder
-        if (WorldKey.validatePath(ctx.getSource().getSender(), worldName) == null) return Command.SINGLE_SUCCESS;
+        if (WorldKey.validatePath(ctx.getSource().getBukkitSender(), worldName) == null) return Command.SINGLE_SUCCESS;
 
         NamespacedKey worldKey = NamespacedKey.fromString(worldName, PolarPaper.getPlugin());
         World bukkitWorld = worldKey == null ? null : Bukkit.getWorld(worldKey);
         if (bukkitWorld != null) {
-            ctx.getSource().getSender().sendMessage(
+            ctx.getSource().getBukkitSender().sendMessage(
                     Component.text()
                             .append(Component.text("World '", NamedTextColor.RED))
                             .append(Component.text(worldName, NamedTextColor.RED))
@@ -52,14 +52,14 @@ public class CreateBlankCommand extends PolarCmd {
 
         Polar.createWorld((PolarSource) null, worldName, defaultConfig).thenAccept(world -> {
             if (world == null) {
-                ctx.getSource().getSender().sendMessage(Component.text("Failed to create blank world", NamedTextColor.RED));
+                ctx.getSource().getBukkitSender().sendMessage(Component.text("Failed to create blank world", NamedTextColor.RED));
                 return;
             }
 
             PolarGenerator generator = PolarGenerator.fromWorld(world);
             if (generator != null) generator.setSource(Polar.getDefaultFolderSource(worldName)); // change source to the path so it can be saved/autosaved properly
 
-            ctx.getSource().getSender().sendMessage(
+            ctx.getSource().getBukkitSender().sendMessage(
                     Component.text()
                             .append(Component.text("Created blank world '", NamedTextColor.AQUA))
                             .append(Component.text(worldName, NamedTextColor.AQUA))
@@ -77,7 +77,7 @@ public class CreateBlankCommand extends PolarCmd {
 
     @Override
     protected int executeDefault(CommandContext<CommandSourceStack> ctx) {
-        ctx.getSource().getSender().sendMessage(
+        ctx.getSource().getBukkitSender().sendMessage(
                 Component.text()
                         .append(Component.text("Usage: /polar createblank <worldname>", NamedTextColor.RED))
         );

@@ -3,7 +3,7 @@ package live.minehub.polarpaper.commands;
 import com.mojang.brigadier.Command;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import com.mojang.brigadier.context.CommandContext;
-import io.papermc.paper.command.brigadier.CommandSourceStack;
+import net.minecraft.commands.CommandSourceStack;
 import live.minehub.polarpaper.Polar;
 import live.minehub.polarpaper.PolarPaper;
 import live.minehub.polarpaper.core.generator.PolarGenerator;
@@ -11,7 +11,7 @@ import live.minehub.polarpaper.core.source.BytesPolarSource;
 import live.minehub.polarpaper.util.WorldKey;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
-import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceLocation;
 import org.bukkit.Bukkit;
 import org.bukkit.World;
 import org.slf4j.Logger;
@@ -26,11 +26,11 @@ public class SaveZSTDCommand extends PolarCmd {
     }
 
     protected static int run(CommandContext<CommandSourceStack> ctx) {
-        Identifier worldId = ctx.getArgument("world name", Identifier.class);
+        ResourceLocation worldId = ctx.getArgument("world name", ResourceLocation.class);
 
         World bukkitWorld = WorldKey.getWorld(worldId);
         if (bukkitWorld == null) {
-            ctx.getSource().getSender().sendMessage(
+            ctx.getSource().getBukkitSender().sendMessage(
                     Component.text()
                             .append(Component.text("World '", NamedTextColor.RED))
                             .append(Component.text(worldId.getPath(), NamedTextColor.RED))
@@ -41,7 +41,7 @@ public class SaveZSTDCommand extends PolarCmd {
 
         PolarGenerator polarGenerator = PolarGenerator.fromWorld(bukkitWorld);
         if (polarGenerator == null) {
-            ctx.getSource().getSender().sendMessage(
+            ctx.getSource().getBukkitSender().sendMessage(
                     Component.text()
                             .append(Component.text("World '", NamedTextColor.RED))
                             .append(Component.text(worldId.getPath(), NamedTextColor.RED))
@@ -50,7 +50,7 @@ public class SaveZSTDCommand extends PolarCmd {
             return Command.SINGLE_SUCCESS;
         }
 
-        ctx.getSource().getSender().sendMessage(
+        ctx.getSource().getBukkitSender().sendMessage(
                 Component.text()
                         .append(Component.text("Saving '", NamedTextColor.GRAY))
                         .append(Component.text(worldId.getPath(), NamedTextColor.GRAY))
@@ -77,7 +77,7 @@ public class SaveZSTDCommand extends PolarCmd {
             }).exceptionally(e -> {
                 String errorMsg = String.format("Failed to save '%s', please check logs for error", bukkitWorld.getKey().getKey());
                 LOGGER.error(errorMsg, e);
-                ctx.getSource().getSender().sendMessage(Component.text(errorMsg, NamedTextColor.RED));
+                ctx.getSource().getBukkitSender().sendMessage(Component.text(errorMsg, NamedTextColor.RED));
                 return null;
             });
         }
@@ -87,7 +87,7 @@ public class SaveZSTDCommand extends PolarCmd {
 
     @Override
     protected int executeDefault(CommandContext<CommandSourceStack> ctx) {
-        ctx.getSource().getSender().sendMessage(
+        ctx.getSource().getBukkitSender().sendMessage(
                 Component.text()
                         .append(Component.text("Usage: /polar savezstd <worldname>", NamedTextColor.RED))
         );

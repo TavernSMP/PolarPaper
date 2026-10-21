@@ -3,7 +3,7 @@ package live.minehub.polarpaper.commands;
 import com.mojang.brigadier.Command;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import com.mojang.brigadier.context.CommandContext;
-import io.papermc.paper.command.brigadier.CommandSourceStack;
+import net.minecraft.commands.CommandSourceStack;
 import live.minehub.polarpaper.PolarPaper;
 import live.minehub.polarpaper.core.config.Config;
 import live.minehub.polarpaper.core.generator.PolarGenerator;
@@ -14,7 +14,7 @@ import net.kyori.adventure.text.event.ClickEvent;
 import net.kyori.adventure.text.event.HoverEvent;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.TextDecoration;
-import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceLocation;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.World;
@@ -31,10 +31,10 @@ public class GotoCommand extends PolarCmd {
     }
 
     private static int run(CommandContext<CommandSourceStack> ctx) {
-        Identifier worldId = ctx.getArgument("world name", Identifier.class);
+        ResourceLocation worldId = ctx.getArgument("world name", ResourceLocation.class);
 
-        CommandSender sender = ctx.getSource().getSender();
-        Entity executor = ctx.getSource().getExecutor();
+        CommandSender sender = ctx.getSource().getBukkitSender();
+        Entity executor = (ctx.getSource().getEntity() == null ? null : ctx.getSource().getEntity().getBukkitEntity());
         if (!(executor instanceof Player player)) return Command.SINGLE_SUCCESS;
 
         World bukkitWorld = WorldKey.getWorld(worldId);
@@ -95,7 +95,7 @@ public class GotoCommand extends PolarCmd {
 
     @Override
     protected int executeDefault(CommandContext<CommandSourceStack> ctx) {
-        ctx.getSource().getSender().sendMessage(
+        ctx.getSource().getBukkitSender().sendMessage(
                 Component.text()
                         .append(Component.text("Usage: /polar goto <worldname>", NamedTextColor.RED))
         );

@@ -4,8 +4,8 @@ import com.mojang.brigadier.Command;
 import com.mojang.brigadier.arguments.IntegerArgumentType;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import com.mojang.brigadier.context.CommandContext;
-import io.papermc.paper.command.brigadier.CommandSourceStack;
-import io.papermc.paper.command.brigadier.Commands;
+import net.minecraft.commands.CommandSourceStack;
+import net.minecraft.commands.Commands;
 import live.minehub.polarpaper.PolarPaper;
 import live.minehub.polarpaper.core.generator.PolarGenerator;
 import live.minehub.polarpaper.core.source.PolarSource;
@@ -32,14 +32,14 @@ public class SetCenterCommand extends PolarCmd {
     }
 
     protected static int convert(CommandContext<CommandSourceStack> ctx, Vector3i center) {
-        CommandSender sender = ctx.getSource().getSender();
+        CommandSender sender = ctx.getSource().getBukkitSender();
         // Being ran from console
         if (!(sender instanceof Player player)) return Command.SINGLE_SUCCESS;
 
         World bukkitWorld = player.getWorld();
         PolarGenerator polarGenerator = PolarGenerator.fromWorld(bukkitWorld);
         if (polarGenerator == null) {
-            ctx.getSource().getSender().sendMessage(
+            ctx.getSource().getBukkitSender().sendMessage(
                     Component.text()
                             .append(Component.text("World '", NamedTextColor.RED))
                             .append(Component.text(bukkitWorld.getKey().toString(), NamedTextColor.RED))
@@ -75,7 +75,7 @@ public class SetCenterCommand extends PolarCmd {
 
     @Override
     protected int executeDefault(CommandContext<CommandSourceStack> ctx) {
-        CommandSender sender = ctx.getSource().getSender();
+        CommandSender sender = ctx.getSource().getBukkitSender();
         // Being ran from console
         if (!(sender instanceof Player player)) return Command.SINGLE_SUCCESS;
         Vector3i center = player.getLocation().toVector().toVector3i();

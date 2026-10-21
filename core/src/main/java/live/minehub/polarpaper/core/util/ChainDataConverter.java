@@ -8,7 +8,7 @@ public class ChainDataConverter implements PolarDataConverter {
 
     @Override
     public void convertBlockPalette(String[] palette, int fromVersion, int toVersion) {
-        if (fromVersion >= CHAIN_RENAME_VERSION) return; // upgrade not needed
+        if (fromVersion >= CHAIN_RENAME_VERSION || toVersion < CHAIN_RENAME_VERSION) return; // upgrade not needed
 
         for (int i = 0; i < palette.length; i++) {
             String string = palette[i];

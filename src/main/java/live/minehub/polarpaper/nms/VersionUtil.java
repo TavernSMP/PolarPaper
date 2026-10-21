@@ -4,13 +4,11 @@ import live.minehub.polarpaper.Polar;
 import live.minehub.polarpaper.PolarPaper;
 import live.minehub.polarpaper.core.WorldUnloader;
 import live.minehub.polarpaper.core.userdata.EntitySerializer;
-import live.minehub.polarpaper.core.util.FoliaUtil;
 import live.minehub.polarpaper.util.EntitiesWorldAccess;
 import org.bukkit.Difficulty;
 import org.bukkit.Location;
 import org.bukkit.World;
 import org.bukkit.WorldCreator;
-import org.bukkit.craftbukkit.util.Versioning;
 import org.bukkit.plugin.Plugin;
 import org.jetbrains.annotations.Nullable;
 
@@ -24,12 +22,7 @@ public class VersionUtil {
     public static CompletableFuture<@Nullable World> createNoSaveLevel(WorldCreator creator, Location spawnPos, Difficulty difficulty, Map<String, Object> gamerules, long time) {
         Polar.setLoading(creator.key(), true);
         Plugin plugin = PolarPaper.getPlugin();
-        String version = Versioning.getCurrentApiVersion();
-        return switch (version) {
-            case "1.21.11" -> new live.minehub.polarpaper.paper_1_21_11.NoSaveLevelCreatorImpl().createLevel(plugin, creator, spawnPos, difficulty, gamerules, time);
-            case "26.1", "26.1.1", "26.1.2", "26.2" -> new live.minehub.polarpaper.paper_26_2.NoSaveLevelCreatorImpl().createLevel(plugin, creator, spawnPos, difficulty, gamerules, time);
-            default -> new live.minehub.polarpaper.paper_26_3.NoSaveLevelCreatorImpl().createLevel(plugin, creator, spawnPos, difficulty, gamerules, time);
-        };
+        return new live.minehub.polarpaper.paper_1_20_1.NoSaveLevelCreatorImpl().createLevel(plugin, creator, spawnPos, difficulty, gamerules, time);
     }
 
     public static EntitiesWorldAccess getPolarFeaturesWorldAccess() {
@@ -37,16 +30,11 @@ public class VersionUtil {
     }
 
     public static EntitySerializer getEntitySerializer() {
-        String version = Versioning.getCurrentApiVersion();
-        return switch (version) {
-            case "1.21.11", "26.1", "26.1.1", "26.1.2" -> new live.minehub.polarpaper.paper_26_1.EntitySerializerImpl();
-            default -> new live.minehub.polarpaper.paper_26_3.EntitySerializerImpl();
-        };
+        return new live.minehub.polarpaper.paper_1_20_1.EntitySerializerImpl();
     }
 
     public static WorldUnloader getWorldUnloader() {
-        if (FoliaUtil.isCanvas()) return new live.minehub.polarpaper.canvas_26_2.WorldUnloaderImpl();
-        return new live.minehub.polarpaper.paper_26_3.WorldUnloaderImpl();
+        return (plugin, world) -> live.minehub.polarpaper.core.util.TaskFutures.runGlobal(plugin, () -> org.bukkit.Bukkit.unloadWorld(world, false));
     }
 
 }

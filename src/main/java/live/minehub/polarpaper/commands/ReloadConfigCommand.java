@@ -3,7 +3,7 @@ package live.minehub.polarpaper.commands;
 import com.mojang.brigadier.Command;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import com.mojang.brigadier.context.CommandContext;
-import io.papermc.paper.command.brigadier.CommandSourceStack;
+import net.minecraft.commands.CommandSourceStack;
 import live.minehub.polarpaper.Polar;
 import live.minehub.polarpaper.PolarPaper;
 import live.minehub.polarpaper.core.config.Config;
@@ -30,7 +30,7 @@ public class ReloadConfigCommand extends PolarCmd {
             numWorlds++;
         }
 
-        ctx.getSource().getSender().sendMessage(
+        ctx.getSource().getBukkitSender().sendMessage(
                 Component.text()
                         .append(Component.text("Reloaded config for ", NamedTextColor.AQUA))
                         .append(Component.text(numWorlds, NamedTextColor.AQUA))

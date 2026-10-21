@@ -1,16 +1,13 @@
 package live.minehub.polarpaper.core.world;
 
-import ca.spottedleaf.moonrise.patches.starlight.light.SWMRNibbleArray;
+import ca.spottedleaf.starlight.common.light.SWMRNibbleArray;
 import live.minehub.polarpaper.core.util.BlockCodec;
 import live.minehub.polarpaper.core.util.PaletteUtil;
 import net.minecraft.core.Holder;
 import net.minecraft.core.Registry;
 import net.minecraft.core.RegistryAccess;
 import net.minecraft.core.registries.Registries;
-import net.minecraft.resources.Identifier;
-import net.minecraft.util.Mth;
-import net.minecraft.util.SimpleBitStorage;
-import net.minecraft.util.ZeroBitStorage;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.level.biome.Biome;
 import net.minecraft.world.level.biome.Biomes;
 import net.minecraft.world.level.block.Block;
@@ -22,9 +19,6 @@ import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.Arrays;
-import java.util.List;
-import java.util.function.ToIntFunction;
 
 /**
  * Representation of the latest version of the section format.
@@ -98,125 +92,41 @@ public record PolarSection(boolean empty, String[] blockPalette, long @Nullable 
     }
 
     public LevelChunkSection createEmptyLevelChunkSection(RegistryAccess registryAccess) {
-        Registry<Biome> registry = registryAccess.lookupOrThrow(Registries.BIOME);
-        Strategy<BlockState> blockStrategy = Strategy.createForBlockStates(Block.BLOCK_STATE_REGISTRY);
-        PalettedContainer<BlockState> states = new PalettedContainer<>(Blocks.AIR.defaultBlockState(), blockStrategy, null);
-
-        Strategy<Holder<Biome>> biomeStrategy = Strategy.createForBiomes(registry.asHolderIdMap());
-        Holder.Reference<Biome> orThrow = registry.getOrThrow(Biomes.PLAINS);
-        PalettedContainer<Holder<Biome>> biomes = new PalettedContainer<>(orThrow, biomeStrategy, null);
-        return new LevelChunkSection(states, biomes);
+        return new LevelChunkSection(registryAccess.registryOrThrow(Registries.BIOME));
     }
 
     public LevelChunkSection createLevelChunkSection(RegistryAccess registryAccess) {
-        if (empty) return createEmptyLevelChunkSection(registryAccess);
-
-        // Blocks
-        BlockState[] materialPalette = new BlockState[blockPalette.length];
-        for (int i = 0; i < blockPalette.length; i++) {
-            materialPalette[i] = BlockCodec.blockFromString(blockPalette[i]);
-        }
-
-        // Biomes
-        Registry<Biome> registry = registryAccess.lookupOrThrow(Registries.BIOME);
-        Holder.Reference<Biome> orThrow = registry.getOrThrow(Biomes.PLAINS);
-        Holder<Biome>[] biomeHolderPalette = new Holder[biomePalette().length];
-        for (int i = 0; i < biomePalette().length; i++) {
-            Identifier identifier = Identifier.tryParse(biomePalette()[i]);
-            if (identifier == null) {
-                LOGGER.warn("Failed to parse biome key: {}", biomePalette()[i]);
-                biomeHolderPalette[i] = orThrow;
-                continue;
+        Registry<Biome> registry = registryAccess.registryOrThrow(Registries.BIOME);
+        Holder<Biome> plains = registry.getHolderOrThrow(Biomes.PLAINS);
+        PalettedContainer<BlockState> states = new PalettedContainer<>(Block.BLOCK_STATE_REGISTRY, Blocks.AIR.defaultBlockState(), PalettedContainer.Strategy.SECTION_STATES);
+        PalettedContainer<Holder<Biome>> biomes = new PalettedContainer<>(registry.asHolderIdMap(), plains, PalettedContainer.Strategy.SECTION_BIOMES);
+        if (!empty) {
+            BlockState[] blocks = new BlockState[blockPalette.length];
+            for (int i = 0; i < blocks.length; i++) {
+                blocks[i] = BlockCodec.blockFromString(blockPalette[i]);
             }
-            Holder.Reference<Biome> biome = registry.get(identifier).orElse(null);
-            if (biome == null) {
-                LOGGER.warn("Failed to get biome: {}", biomePalette()[i]);
-                biomeHolderPalette[i] = orThrow;
-                continue;
+            Holder<Biome>[] biomeHolders = new Holder[biomePalette.length];
+            for (int i = 0; i < biomeHolders.length; i++) {
+                ResourceLocation key = ResourceLocation.tryParse(biomePalette[i]);
+                biomeHolders[i] = key == null ? plains : registry.getHolder(net.minecraft.resources.ResourceKey.create(Registries.BIOME, key)).orElse((Holder.Reference<Biome>) plains);
             }
-            biomeHolderPalette[i] = biome;
+            int[] blockIndices = unpackIndices(blockData, 4096);
+            int[] biomeIndices = unpackIndices(biomeData, 64);
+            for (int i = 0; i < blockIndices.length; i++) {
+                states.set(i & 15, i >> 8, (i >> 4) & 15, blocks[blockIndices[i]]);
+            }
+            for (int i = 0; i < biomeIndices.length; i++) {
+                biomes.set(i & 3, i >> 4, (i >> 2) & 3, biomeHolders[biomeIndices[i]]);
+            }
         }
-
-        Strategy<BlockState> blockStrategy = Strategy.createForBlockStates(Block.BLOCK_STATE_REGISTRY);
-        PalettedContainer<BlockState> states = new PalettedContainer<>(Blocks.AIR.defaultBlockState(), blockStrategy, materialPalette);
-
-        Strategy<Holder<Biome>> biomeStrategy = Strategy.createForBiomes(registry.asHolderIdMap());
-        PalettedContainer<Holder<Biome>> biomes = new PalettedContainer<>(orThrow, biomeStrategy, biomeHolderPalette);
-
-        int bitsPerBlockEntry = Mth.ceillog2(blockPalette.length);
-        int longBitsPerBlockEntry = bitsPerBlockEntry;
-        if (blockData != null) {
-            longBitsPerBlockEntry = PaletteUtil.getBitsForLongLength(blockData.length, blockStrategy.entryCount());
-        }
-
-        int bitsPerBiomeEntry = Mth.ceillog2(biomePalette.length);
-        int longBitsPerBiomeEntry = bitsPerBiomeEntry;
-        if (biomeData != null) {
-            longBitsPerBiomeEntry = PaletteUtil.getBitsForLongLength(biomeData.length, biomeStrategy.entryCount());
-        }
-
-        biomes.data = getPalettedContainer(biomeHolderPalette, biomeData, bitsPerBiomeEntry, longBitsPerBiomeEntry, biomeStrategy, registry.asHolderIdMap()::getId);
-        states.data = getPalettedContainer(materialPalette, blockData, bitsPerBlockEntry, longBitsPerBlockEntry, blockStrategy, Block.BLOCK_STATE_REGISTRY::getId);
-
-        try {
-            return new LevelChunkSection(states, biomes);
-        } catch (Exception e) {
-            LOGGER.info("Biome Bits: {}", bitsPerBiomeEntry);
-            if (biomeData != null) LOGGER.info("Biome Data Length: {}", biomeData.length);
-            LOGGER.info("Biome Palette Length: {}", biomePalette.length);
-            LOGGER.info("----");
-            LOGGER.info("Block Bits: {}", bitsPerBlockEntry);
-            if (blockData != null) LOGGER.info("Block Data Length: {}", blockData.length);
-            LOGGER.info("Block Palette Length: {}", materialPalette.length);
-            throw new RuntimeException(e);
-        }
+        return new LevelChunkSection(states, biomes);
     }
 
-    private static <T> PalettedContainer.Data<T> getPalettedContainer(T[] palette, long @Nullable [] data, int bits, int longBits, Strategy<T> strategy, ToIntFunction<T> globalId) {
-        if (data == null || data.length == 0 || bits == 0) {
-            Configuration configuration = PaletteUtil.getConfigurationForBitCount(strategy, 0);
-            return new PalettedContainer.Data<>(
-                    configuration,
-                    new ZeroBitStorage(strategy.entryCount()),
-                    configuration.createPalette(strategy, List.of(palette[0]))
-            );
+    private static int[] unpackIndices(long[] packed, int count) {
+        int[] indices = new int[count];
+        if (packed != null && packed.length != 0) {
+            PaletteUtil.unpack(indices, packed, PaletteUtil.getBitsForLongLength(packed.length, count));
         }
-
-        Configuration configuration = PaletteUtil.getConfigurationForBitCount(strategy, bits);
-        int valuesPerLong = (char) (64 / configuration.bitsInMemory());
-        int requiredLength = (strategy.entryCount() + valuesPerLong - 1) / valuesPerLong;
-        Palette<T> created = configuration.createPalette(strategy, Arrays.asList(palette));
-        boolean global = created instanceof GlobalPalette;
-
-        long[] packed;
-        if (!global && !configuration.alwaysRepack() && configuration.bitsInMemory() == bits && data.length == requiredLength) {
-            packed = data.clone();
-        } else {
-            int[] unpacked = new int[strategy.entryCount()];
-            PaletteUtil.unpack(unpacked, data, longBits);
-            if (global) {
-                // local palette index -> current registry ID
-                int[] ids = new int[palette.length];
-                for (int i = 0; i < palette.length; i++) ids[i] = globalId.applyAsInt(palette[i]);
-                for (int i = 0; i < unpacked.length; i++) unpacked[i] = ids[unpacked[i]];
-            }
-            packed = PaletteUtil.pack(unpacked, configuration.bitsInMemory());
-        }
-
-        try {
-            return new PalettedContainer.Data<>(
-                    configuration,
-                    new SimpleBitStorage(configuration.bitsInMemory(), strategy.entryCount(), packed),
-                    created
-            );
-        } catch (SimpleBitStorage.InitializationException e) {
-            LOGGER.info("Bits: {}, {}, {}", configuration.bitsInMemory(), configuration.bitsInStorage(), bits);
-            LOGGER.info("Strategy Entry Count: {}", strategy.entryCount());
-            LOGGER.info("Data: {}", Arrays.toString(data));
-            LOGGER.info("Packed: {}", Arrays.toString(packed));
-            LOGGER.info("Palette: {}", Arrays.toString(palette));
-            throw new RuntimeException(e);
-        }
+        return indices;
     }
-
 }

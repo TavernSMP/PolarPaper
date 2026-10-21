@@ -6,8 +6,8 @@ import com.mojang.brigadier.arguments.IntegerArgumentType;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import com.mojang.brigadier.context.CommandContext;
-import io.papermc.paper.command.brigadier.CommandSourceStack;
-import io.papermc.paper.command.brigadier.Commands;
+import net.minecraft.commands.CommandSourceStack;
+import net.minecraft.commands.Commands;
 import live.minehub.polarpaper.Polar;
 import live.minehub.polarpaper.PolarPaper;
 import live.minehub.polarpaper.core.config.Config;
@@ -54,7 +54,7 @@ public class ConvertCommand extends PolarCmd {
     }
 
     private int execute(CommandContext<CommandSourceStack> ctx, boolean saveLight) {
-        CommandSender sender = ctx.getSource().getSender();
+        CommandSender sender = ctx.getSource().getBukkitSender();
         // Being ran from console
         if (!(sender instanceof Player player)) return Command.SINGLE_SUCCESS;
 
@@ -65,7 +65,7 @@ public class ConvertCommand extends PolarCmd {
         Integer chunkRadius = ctx.getArgument("chunk radius", Integer.class);
 
         // newWorldName becomes a file name, so it must not be able to go outside the worlds folder
-        if (WorldKey.validatePath(ctx.getSource().getSender(), newWorldName) == null) return Command.SINGLE_SUCCESS;
+        if (WorldKey.validatePath(ctx.getSource().getBukkitSender(), newWorldName) == null) return Command.SINGLE_SUCCESS;
 
         NamespacedKey newWorldKey = NamespacedKey.fromString(newWorldName, PolarPaper.getPlugin());
         if (newWorldKey == null) {
@@ -145,7 +145,7 @@ public class ConvertCommand extends PolarCmd {
 
     @Override
     protected int executeDefault(CommandContext<CommandSourceStack> ctx) {
-        ctx.getSource().getSender().sendMessage(
+        ctx.getSource().getBukkitSender().sendMessage(
                 Component.text()
                         .append(Component.text("Usage: /polar convert <new world name> <chunk radius> [save light] (While in a non-polar world) to convert the chunks around you", NamedTextColor.RED))
         );
@@ -156,7 +156,7 @@ public class ConvertCommand extends PolarCmd {
     protected void addToBuilder(LiteralArgumentBuilder<CommandSourceStack> builder) {
         builder.then(Commands.argument("new world name", StringArgumentType.string())
                 .suggests((ctx, b) -> {
-                    if (ctx.getSource().getSender() instanceof Player player) {
+                    if (ctx.getSource().getBukkitSender() instanceof Player player) {
                         b.suggest(player.getWorld().getKey().value());
                     }
                     return b.buildFuture();

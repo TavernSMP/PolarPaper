@@ -5,8 +5,8 @@ import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.tree.CommandNode;
 import com.mojang.brigadier.tree.LiteralCommandNode;
-import io.papermc.paper.command.brigadier.CommandSourceStack;
-import io.papermc.paper.command.brigadier.Commands;
+import net.minecraft.commands.CommandSourceStack;
+import net.minecraft.commands.Commands;
 import net.kyori.adventure.builder.AbstractBuilder;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.TextComponent;
@@ -25,9 +25,9 @@ public class CommandManager {
     private final Map<String, PolarCmd> registeredCommands = new HashMap<>();
     private final LiteralArgumentBuilder<CommandSourceStack> rootCmd =
             Commands.literal("polar")
-                    .requires(source -> source.getSender().hasPermission("polarpaper.use"));
+                    .requires(source -> source.getBukkitSender().hasPermission("polarpaper.use"));
 
-    public void register(Commands registrar) {
+    public void register() {
         register(new BrowseCommand());
         register(new ConvertCommand());
         register(new CopyCommand());
@@ -57,16 +57,16 @@ public class CommandManager {
 
         rootCmd
                 .then(Commands.literal("help")
-                        .requires(source -> source.getSender().hasPermission("polarpaper.help"))
+                        .requires(source -> source.getBukkitSender().hasPermission("polarpaper.help"))
                         .executes(this::executeHelp))
                 .then(Commands.literal("wand")
-                        .requires(source -> source.getSender().hasPermission("polarpaper.wand"))
+                        .requires(source -> source.getBukkitSender().hasPermission("polarpaper.wand"))
                         .executes(WandCommand::wand))
                 .then(Commands.literal("pos1")
-                        .requires(source -> source.getSender().hasPermission("polarpaper.wand"))
+                        .requires(source -> source.getBukkitSender().hasPermission("polarpaper.wand"))
                         .executes(WandCommand::pos1))
                 .then(Commands.literal("pos2")
-                        .requires(source -> source.getSender().hasPermission("polarpaper.wand"))
+                        .requires(source -> source.getBukkitSender().hasPermission("polarpaper.wand"))
                         .executes(WandCommand::pos2));
 
         LiteralCommandNode<CommandSourceStack> build = rootCmd.build();
@@ -75,7 +75,8 @@ public class CommandManager {
         getUsageRecursive(builder, build, 1);
         helpComponent = ((AbstractBuilder<TextComponent>)builder).build();
 
-        registrar.register(build);
+        ((org.bukkit.craftbukkit.v1_20_R1.CraftServer) org.bukkit.Bukkit.getServer()).getServer().getCommands().getDispatcher().getRoot().addChild(build);
+        ((org.bukkit.craftbukkit.v1_20_R1.CraftServer) org.bukkit.Bukkit.getServer()).syncCommands();
     }
 
     private void register(PolarCmd polarCmd) {
@@ -90,7 +91,7 @@ public class CommandManager {
     }
 
     private int executeHelp(CommandContext<CommandSourceStack> ctx) {
-        ctx.getSource().getSender().sendMessage(helpComponent);
+        ctx.getSource().getBukkitSender().sendMessage(helpComponent);
         return Command.SINGLE_SUCCESS;
     }
 

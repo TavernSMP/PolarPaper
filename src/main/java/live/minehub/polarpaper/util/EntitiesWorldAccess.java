@@ -14,9 +14,9 @@ import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.chunk.ChunkAccess;
 import org.bukkit.Location;
 import org.bukkit.World;
-import org.bukkit.craftbukkit.CraftWorld;
-import org.bukkit.craftbukkit.entity.CraftEntity;
-import org.bukkit.craftbukkit.persistence.DirtyCraftPersistentDataContainer;
+import org.bukkit.craftbukkit.v1_20_R1.CraftWorld;
+import org.bukkit.craftbukkit.v1_20_R1.entity.CraftEntity;
+import org.bukkit.craftbukkit.v1_20_R1.persistence.DirtyCraftPersistentDataContainer;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.EntityType;
 import org.bukkit.persistence.PersistentDataContainer;
@@ -82,11 +82,11 @@ public class EntitiesWorldAccess implements PolarWorldAccess {
             PolarEntitySpawnEvent event = new PolarEntitySpawnEvent(polarEntity, bukkitEntity, spawnLocation, false);
             event.callEvent();
             if (!event.isCancelled()) {
-                successEntities.add(entity);
+                successEntities.addAll(entity.getSelfAndPassengers().toList());
             }
         }
 
-        level.moonrise$getEntityLookup().addEntityChunkEntities(successEntities, chunk.getPos());
+        level.getEntityLookup().addEntityChunkEntities(successEntities);
 
         if (version >= PERSISTENT_DATA_CONTAINER_VERSION) {
             PersistentDataContainer persistentDataContainer = chunk.persistentDataContainer;
@@ -106,7 +106,7 @@ public class EntitiesWorldAccess implements PolarWorldAccess {
         List<CompletableFuture<@Nullable PolarEntity>> entityFutures = new ArrayList<>();
 
         for (@NotNull Entity entity : entities) {
-            if (entity.getType() == EntityType.PLAYER) continue;
+            if (entity.getType() == EntityType.PLAYER || entity.isInsideVehicle()) continue;
             if (!entity.isPersistent()) continue;
             CompletableFuture<@Nullable PolarEntity> future = new CompletableFuture<>();
             FoliaUtil.scheduleOnEntityIfFolia(plugin, entity, () -> {

@@ -21,6 +21,7 @@ public final class ShutdownExecutor {
 
     private static final BlockingQueue<Runnable> TASKS = new LinkedBlockingQueue<>();
     private static volatile boolean running = false;
+    private static volatile Thread owner;
 
     private ShutdownExecutor() {
     }
@@ -30,6 +31,7 @@ public final class ShutdownExecutor {
     }
 
     public static void start() {
+        owner = Thread.currentThread();
         running = true;
     }
 
@@ -43,7 +45,11 @@ public final class ShutdownExecutor {
     }
 
     public static void execute(Runnable task) {
-        TASKS.add(task);
+        if (Thread.currentThread() == owner) {
+            task.run();
+        } else {
+            TASKS.add(task);
+        }
     }
 
     public static boolean awaitCompletion(CompletableFuture<?> future, long timeout, TimeUnit unit) {

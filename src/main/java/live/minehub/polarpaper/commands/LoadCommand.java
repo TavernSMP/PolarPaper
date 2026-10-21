@@ -3,7 +3,7 @@ package live.minehub.polarpaper.commands;
 import com.mojang.brigadier.Command;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import com.mojang.brigadier.context.CommandContext;
-import io.papermc.paper.command.brigadier.CommandSourceStack;
+import net.minecraft.commands.CommandSourceStack;
 import live.minehub.polarpaper.Polar;
 import live.minehub.polarpaper.PolarPaper;
 import live.minehub.polarpaper.core.generator.PolarGenerator;
@@ -37,10 +37,10 @@ public class LoadCommand extends PolarCmd {
     }
 
     protected static void loadWorld(CommandContext<CommandSourceStack> ctx, String worldPath) {
-        Path path = WorldKey.validatePath(ctx.getSource().getSender(), worldPath);
+        Path path = WorldKey.validatePath(ctx.getSource().getBukkitSender(), worldPath);
         if (path == null) return;
         if (!Files.exists(path)) {
-            ctx.getSource().getSender().sendMessage(Component.text("File '" + path.getFileName() + "' does not exist", NamedTextColor.RED));
+            ctx.getSource().getBukkitSender().sendMessage(Component.text("File '" + path.getFileName() + "' does not exist", NamedTextColor.RED));
             return;
         }
 
@@ -51,14 +51,14 @@ public class LoadCommand extends PolarCmd {
         if (bukkitWorld != null) {
             PolarGenerator polarWorld = PolarGenerator.fromWorld(bukkitWorld);
             if (polarWorld == null) {
-                ctx.getSource().getSender().sendMessage(
+                ctx.getSource().getBukkitSender().sendMessage(
                         Component.text()
                                 .append(Component.text("Non-polar world '", NamedTextColor.RED))
                                 .append(Component.text(newWorldName, NamedTextColor.RED))
                                 .append(Component.text("' already loaded!", NamedTextColor.RED))
                 );
             } else {
-                ctx.getSource().getSender().sendMessage(
+                ctx.getSource().getBukkitSender().sendMessage(
                         Component.text()
                                 .append(Component.text("World '", NamedTextColor.RED))
                                 .append(Component.text(newWorldName, NamedTextColor.RED))
@@ -72,7 +72,7 @@ public class LoadCommand extends PolarCmd {
     }
 
     protected static void loadWorld(CommandContext<CommandSourceStack> ctx, PolarSource source, String newWorldName) {
-        ctx.getSource().getSender().sendMessage(
+        ctx.getSource().getBukkitSender().sendMessage(
                 Component.text()
                         .append(Component.text("Loading '", NamedTextColor.GRAY))
                         .append(Component.text(newWorldName, NamedTextColor.GRAY))
@@ -86,7 +86,7 @@ public class LoadCommand extends PolarCmd {
             if (successful) {
                 int ms = (int) ((System.nanoTime() - before) / 1_000_000);
 
-                ctx.getSource().getSender().sendMessage(
+                ctx.getSource().getBukkitSender().sendMessage(
                         Component.text()
                                 .append(Component.text("Loaded '", NamedTextColor.AQUA))
                                 .append(Component.text(newWorldName, NamedTextColor.AQUA))
@@ -100,7 +100,7 @@ public class LoadCommand extends PolarCmd {
                                                 .append(Component.text("/polar goto " + newWorldName)))))
                 );
             } else {
-                ctx.getSource().getSender().sendMessage(
+                ctx.getSource().getBukkitSender().sendMessage(
                         Component.text()
                                 .append(Component.text("Failed to load world '", NamedTextColor.RED))
                                 .append(Component.text(newWorldName, NamedTextColor.RED))
@@ -112,7 +112,7 @@ public class LoadCommand extends PolarCmd {
 
     @Override
     protected int executeDefault(CommandContext<CommandSourceStack> ctx) {
-        ctx.getSource().getSender().sendMessage(
+        ctx.getSource().getBukkitSender().sendMessage(
                 Component.text()
                         .append(Component.text("Usage: /polar load <worldname>", NamedTextColor.RED))
         );

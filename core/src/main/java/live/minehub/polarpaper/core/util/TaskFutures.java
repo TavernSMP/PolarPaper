@@ -1,6 +1,6 @@
 package live.minehub.polarpaper.core.util;
 
-import ca.spottedleaf.moonrise.common.util.TickThread;
+import io.papermc.paper.util.TickThread;
 import org.bukkit.Bukkit;
 import org.bukkit.World;
 import org.bukkit.plugin.Plugin;

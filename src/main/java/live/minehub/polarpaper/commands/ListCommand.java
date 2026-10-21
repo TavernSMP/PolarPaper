@@ -4,8 +4,8 @@ import com.mojang.brigadier.Command;
 import com.mojang.brigadier.arguments.IntegerArgumentType;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import com.mojang.brigadier.context.CommandContext;
-import io.papermc.paper.command.brigadier.CommandSourceStack;
-import io.papermc.paper.command.brigadier.Commands;
+import net.minecraft.commands.CommandSourceStack;
+import net.minecraft.commands.Commands;
 import live.minehub.polarpaper.PolarPaper;
 import live.minehub.polarpaper.core.generator.PolarGenerator;
 import net.kyori.adventure.builder.AbstractBuilder;
@@ -31,7 +31,7 @@ public class ListCommand extends PolarCmd {
     }
 
     public int execute(CommandContext<CommandSourceStack> ctx, int page) {
-        boolean isConsole = ctx.getSource().getSender() instanceof ConsoleCommandSender;
+        boolean isConsole = ctx.getSource().getBukkitSender() instanceof ConsoleCommandSender;
 
         TextComponent.Builder builder = Component.text();
         List<World> worlds = new ArrayList<>();
@@ -59,12 +59,12 @@ public class ListCommand extends PolarCmd {
             if (polarGenerator == null) color = NamedTextColor.GRAY;
 
             String worldName = world.getKey().toString()
-                    .replace(PolarPaper.getPlugin().namespace() + ":", ""); // don't show Polar's namespace
+                    .replace(PolarPaper.getPlugin().getName().toLowerCase(java.util.Locale.ROOT) + ":", ""); // don't show Polar's namespace
             builder.appendNewline();
             builder.append(Component.text(" - ", NamedTextColor.WHITE));
             builder.append(Component.text(worldName, color));
 
-            if (ctx.getSource().getSender().hasPermission("polarpaper.goto") && !isConsole) {
+            if (ctx.getSource().getBukkitSender().hasPermission("polarpaper.goto") && !isConsole) {
                 builder.appendSpace();
                 builder.appendSpace();
                 builder.append(Component.text("ɢᴏᴛᴏ", NamedTextColor.AQUA)
@@ -93,7 +93,7 @@ public class ListCommand extends PolarCmd {
             }
         }
 
-        ctx.getSource().getSender().sendMessage(((AbstractBuilder<TextComponent>)builder).build());
+        ctx.getSource().getBukkitSender().sendMessage(((AbstractBuilder<TextComponent>)builder).build());
 
         return Command.SINGLE_SUCCESS;
     }

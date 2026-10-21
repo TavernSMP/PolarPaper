@@ -12,7 +12,7 @@ import net.kyori.adventure.text.TextComponent;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.minecraft.server.level.ServerLevel;
 import org.bukkit.World;
-import org.bukkit.craftbukkit.CraftWorld;
+import org.bukkit.craftbukkit.v1_20_R1.CraftWorld;
 import org.jetbrains.annotations.Nullable;
 import org.joml.Vector3i;
 
@@ -33,6 +33,7 @@ public class PolarWorldLoader extends PolarGenerator {
 
     //https://github.com/hollow-cube/polar/blob/main/src/main/java/net/hollowcube/polar/StreamingPolarLoader.java#L64
     public CompletableFuture<Void> load(World world) {
+        live.minehub.polarpaper.core.world.PolarDataConverter.DEFAULT.validateDataVersion(polarWorld.dataVersion());
         ServerLevel level = ((CraftWorld) world).getHandle();
 
         List<CompletableFuture<Void>> futures = new ArrayList<>();

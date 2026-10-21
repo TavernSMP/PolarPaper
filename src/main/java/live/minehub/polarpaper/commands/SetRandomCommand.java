@@ -4,8 +4,8 @@ import com.mojang.brigadier.Command;
 import com.mojang.brigadier.arguments.IntegerArgumentType;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import com.mojang.brigadier.context.CommandContext;
-import io.papermc.paper.command.brigadier.CommandSourceStack;
-import io.papermc.paper.command.brigadier.Commands;
+import net.minecraft.commands.CommandSourceStack;
+import net.minecraft.commands.Commands;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.minecraft.core.registries.BuiltInRegistries;
@@ -27,7 +27,7 @@ public class SetRandomCommand extends PolarCmd {
 
     protected static int run(CommandContext<CommandSourceStack> ctx) {
 
-        if (!(ctx.getSource().getSender() instanceof Player player)) return Command.SINGLE_SUCCESS;
+        if (!(ctx.getSource().getBukkitSender() instanceof Player player)) return Command.SINGLE_SUCCESS;
 
         World world = player.getWorld();
 
@@ -54,7 +54,7 @@ public class SetRandomCommand extends PolarCmd {
 
                     i++;
 
-                    world.getBlockAt(startX + x, y, startZ + z).setBlockData(randomMat.asBlockData());
+                    world.getBlockAt(startX + x, y, startZ + z).setBlockData(org.bukkit.craftbukkit.v1_20_R1.block.data.CraftBlockData.fromData(randomMat));
                     if (i >= numBlocks) return Command.SINGLE_SUCCESS;
                 }
             }
@@ -65,7 +65,7 @@ public class SetRandomCommand extends PolarCmd {
 
     @Override
     protected int executeDefault(CommandContext<CommandSourceStack> ctx) {
-        ctx.getSource().getSender().sendMessage(
+        ctx.getSource().getBukkitSender().sendMessage(
                 Component.text()
                         .append(Component.text("Usage: /polar setrandom <num blocks>", NamedTextColor.RED))
         );

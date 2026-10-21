@@ -1,6 +1,5 @@
 package live.minehub.polarpaper;
 
-import io.papermc.paper.persistence.PersistentDataContainerView;
 import live.minehub.polarpaper.commands.WandCommand;
 import live.minehub.polarpaper.core.config.Config;
 import live.minehub.polarpaper.core.generator.PolarGenerator;
@@ -92,7 +91,7 @@ public class PolarListener implements Listener {
     public void onBlockBreak(BlockBreakEvent event) {
         Player player = event.getPlayer();
         ItemStack item = player.getInventory().getItemInMainHand();
-        PersistentDataContainerView itemData = item.getPersistentDataContainer();
+        PersistentDataContainer itemData = item.getItemMeta().getPersistentDataContainer();
         if (!itemData.has(WandCommand.ITEM_STACK_KEY)) return;
 
         PersistentDataContainer data = player.getPersistentDataContainer();
@@ -111,7 +110,7 @@ public class PolarListener implements Listener {
         if (event.getHand() != EquipmentSlot.HAND) return;
         Player player = event.getPlayer();
         ItemStack item = player.getInventory().getItemInMainHand();
-        PersistentDataContainerView itemData = item.getPersistentDataContainer();
+        PersistentDataContainer itemData = item.getItemMeta().getPersistentDataContainer();
         if (!itemData.has(WandCommand.ITEM_STACK_KEY)) return;
 
         PersistentDataContainer data = player.getPersistentDataContainer();

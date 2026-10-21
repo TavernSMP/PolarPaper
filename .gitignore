@@ -141,3 +141,6 @@ gradle-app.setting
 
 ### PolarPaper ###
 run/
+.integration/
+dist/
+*.log

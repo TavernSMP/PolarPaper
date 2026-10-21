@@ -14,12 +14,11 @@ default:
   worldType: FLAT # One of: NORMAL, FLAT, AMPLIFIED, LARGE_BIOMES
   environment: NORMAL # One of: NORMAL, NETHER, THE_END, CUSTOM
   gamerules: # Custom rules: liquidPhysics, blockPhysics, blockGravity, blockFade
-    - spawn_mobs: false
-    - fire_spread_radius_around_player: 0
-    - random_tick_speed: 0
-    - mob_griefing: false
-    - spread_vines: false
-    - tnt_explodes: false
+    - doMobSpawning: false
+    - doFireTick: false
+    - randomTickSpeed: 0
+    - mobGriefing: false
+    - doVinesSpread: false
     - blockFade: false
     - blockPhysics: true
     - blockGravity: true

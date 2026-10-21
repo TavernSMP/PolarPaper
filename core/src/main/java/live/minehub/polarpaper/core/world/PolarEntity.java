@@ -1,9 +1,6 @@
 package live.minehub.polarpaper.core.world;
 
-import ca.spottedleaf.moonrise.common.PlatformHooks;
-import ca.spottedleaf.moonrise.patches.chunk_system.level.entity.EntityLookup;
-import io.papermc.paper.registry.RegistryAccess;
-import io.papermc.paper.registry.RegistryKey;
+import io.papermc.paper.chunk.system.entity.EntityLookup;
 import live.minehub.polarpaper.core.userdata.EntitySerializer;
 import live.minehub.polarpaper.core.util.MemorySegmentReader;
 import net.minecraft.SharedConstants;
@@ -15,7 +12,7 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.util.datafix.fixes.References;
 import net.minecraft.world.entity.Entity;
 import org.bukkit.*;
-import org.bukkit.craftbukkit.CraftWorld;
+import org.bukkit.craftbukkit.v1_20_R1.CraftWorld;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -33,7 +30,7 @@ public record PolarEntity(double x, double y, double z, float yaw, float pitch, 
         MemorySegmentReader reader = new MemorySegmentReader(MemorySegment.ofArray(bytes));
         CompoundTag compound;
         try {
-            compound = NbtIo.read(reader, NbtAccounter.uncompressedQuota());
+            compound = NbtIo.read(reader, NbtAccounter.UNLIMITED);
         } catch (IOException _) {
 //                ExceptionUtil.log(e);
             return null;
@@ -42,12 +39,14 @@ public record PolarEntity(double x, double y, double z, float yaw, float pitch, 
     }
 
     public static @Nullable Entity toNMSEntity(EntitySerializer entitySerializer, World world, Location spawnLocation, CompoundTag compound) {
-        Integer dataVersion = compound.getInt("DataVersion").orElse(null);
-        if (dataVersion == null) return null;
-        compound = PlatformHooks.get().convertNBT(References.ENTITY, MinecraftServer.getServer().getFixerUpper(), compound, dataVersion, SharedConstants.getCurrentVersion().dataVersion().version());
+        if (!compound.contains("DataVersion", net.minecraft.nbt.Tag.TAG_ANY_NUMERIC)) {
+            return null;
+        }
+        int dataVersion = compound.getInt("DataVersion");
+        compound = (CompoundTag) MinecraftServer.getServer().getFixerUpper().update(References.ENTITY, new com.mojang.serialization.Dynamic<>(NbtOps.INSTANCE, compound), dataVersion, SharedConstants.getCurrentVersion().getDataVersion().getVersion()).getValue();
 
         ServerLevel level = ((CraftWorld) world).getHandle();
-        EntityLookup entityLookup = level.moonrise$getEntityLookup();
+        EntityLookup entityLookup = level.getEntityLookup();
         UUID entityUUID = getUUID(compound);
         if (entityUUID != null) {
             boolean hasEntity = entityLookup.hasEntity(entityUUID);
@@ -67,41 +66,43 @@ public record PolarEntity(double x, double y, double z, float yaw, float pitch, 
         rotationTag.add(FloatTag.valueOf(spawnLocation.getPitch()));
         compound.put("Rotation", rotationTag);
 
-        String entityId = compound.getStringOr("id", "").replace("minecraft:", "");
+        String entityId = compound.getString("id").replace("minecraft:", "");
 
         // Rotate painting
-        String paintingVariant = compound.getString("variant").orElse(null);
-        if (entityId.equals("painting") && paintingVariant != null) {
+        String paintingVariant = compound.getString("variant");
+        if (entityId.equals("painting") && !paintingVariant.isEmpty()) {
             int facingIndex = Math.floorMod((int) Math.floor(spawnLocation.getYaw() / 90), 4);
             Direction[] directions = {Direction.SOUTH, Direction.WEST, Direction.NORTH, Direction.EAST};
-            compound.put("facing", IntTag.valueOf(facingIndex));
+            compound.putByte("Facing", (byte) facingIndex);
 
             Direction paintingDir = directions[facingIndex];
             Direction counterClockWise = paintingDir.getCounterClockWise();
-            Vec3i unitVec3i = counterClockWise.getUnitVec3i();
+            Vec3i unitVec3i = counterClockWise.getNormal();
 
-            Art art = RegistryAccess.registryAccess().getRegistry(RegistryKey.PAINTING_VARIANT)
+            Art art = org.bukkit.Registry.ART
                     .get(NamespacedKey.fromString(paintingVariant.toLowerCase(Locale.ROOT)));
             if (art != null && art.getBlockHeight() % 2 == 0) spawnLocation.subtract(0, 1, 0);
             if (art != null && art.getBlockWidth() % 2 == 0) {
                 spawnLocation.subtract(unitVec3i.getX() * 0.5, 0, unitVec3i.getZ() * 0.5);
             }
 
-            IntArrayTag blockPosTag = new IntArrayTag(new int[]{spawnLocation.blockX(), spawnLocation.blockY(), spawnLocation.blockZ()});
-            compound.put("block_pos", blockPosTag);
+            compound.putInt("TileX", spawnLocation.getBlockX());
+            compound.putInt("TileY", spawnLocation.getBlockY());
+            compound.putInt("TileZ", spawnLocation.getBlockZ());
         }
 
         // Rotate item frame
         // 3-south, 4-west, 2-north, 5-east, 1-top, and 0-bottom
-        Integer facingValue = compound.getInt("Facing").orElse(null);
-        if ((entityId.equals("item_frame") || entityId.equals("glow_item_frame")) && facingValue != null && facingValue != 1 && facingValue != 0) {
+        int facingValue = compound.getInt("Facing");
+        if ((entityId.equals("item_frame") || entityId.equals("glow_item_frame")) && facingValue != 1 && facingValue != 0) {
             int facingIndex = Math.floorMod((int) Math.floor(spawnLocation.getYaw() / 90), 4);
             Direction[] directions = {Direction.SOUTH, Direction.WEST, Direction.NORTH, Direction.EAST};
             int newFacingValue = directions[facingIndex].get3DDataValue();
             compound.put("Facing", IntTag.valueOf(newFacingValue));
 
-            IntArrayTag blockPosTag = new IntArrayTag(new int[]{spawnLocation.blockX(), spawnLocation.blockY(), spawnLocation.blockZ()});
-            compound.put("block_pos", blockPosTag);
+            compound.putInt("TileX", spawnLocation.getBlockX());
+            compound.putInt("TileY", spawnLocation.getBlockY());
+            compound.putInt("TileZ", spawnLocation.getBlockZ());
         }
 
         Entity nmsEntity = entitySerializer.compoundToEntity(world, compound);
@@ -125,8 +126,8 @@ public record PolarEntity(double x, double y, double z, float yaw, float pitch, 
     }
 
     private static @Nullable UUID getUUID(CompoundTag compound) {
-        int[] ints = compound.getIntArray("UUID").orElse(null);
-        if (ints == null) return null;
+        int[] ints = compound.getIntArray("UUID");
+        if (ints == null || ints.length != 4) return null;
 
         long msb = ((long) ints[0] << 32) | (ints[1] & 0xFFFFFFFFL);
         long lsb = ((long) ints[2] << 32) | (ints[3] & 0xFFFFFFFFL);

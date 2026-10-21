@@ -2,7 +2,7 @@ package live.minehub.polarpaper.commands;
 
 import com.mojang.brigadier.Command;
 import com.mojang.brigadier.context.CommandContext;
-import io.papermc.paper.command.brigadier.CommandSourceStack;
+import net.minecraft.commands.CommandSourceStack;
 import live.minehub.polarpaper.schematic.Schematic;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
@@ -19,21 +19,21 @@ import org.bukkit.util.Vector;
 
 public class WandCommand {
 
-    private static final ItemStack ITEM_STACK = ItemStack.of(Material.BREEZE_ROD);
+    private static final ItemStack ITEM_STACK = new ItemStack(Material.BLAZE_ROD);
     public static final NamespacedKey ITEM_STACK_KEY = new NamespacedKey("polarpaper", "wand");
 
     static {
         ITEM_STACK.editMeta(ItemMeta.class, meta -> {
             meta.displayName(Component.text("Polar Wand", NamedTextColor.AQUA).decoration(TextDecoration.ITALIC, false));
             PersistentDataContainer data = meta.getPersistentDataContainer();
-            data.set(ITEM_STACK_KEY, PersistentDataType.BOOLEAN, true);
+            data.set(ITEM_STACK_KEY, PersistentDataType.BYTE, (byte) 1);
         });
     }
 
     protected static int pos1(CommandContext<CommandSourceStack> ctx) {
-        CommandSender sender = ctx.getSource().getSender();
+        CommandSender sender = ctx.getSource().getBukkitSender();
         if (!(sender instanceof Player player)) {
-            ctx.getSource().getSender().sendMessage(
+            ctx.getSource().getBukkitSender().sendMessage(
                     Component.text()
                             .append(Component.text("Usage: /polar pos1 (while in a world)", NamedTextColor.RED))
             );
@@ -53,9 +53,9 @@ public class WandCommand {
     }
 
     protected static int pos2(CommandContext<CommandSourceStack> ctx) {
-        CommandSender sender = ctx.getSource().getSender();
+        CommandSender sender = ctx.getSource().getBukkitSender();
         if (!(sender instanceof Player player)) {
-            ctx.getSource().getSender().sendMessage(
+            ctx.getSource().getBukkitSender().sendMessage(
                     Component.text()
                             .append(Component.text("Usage: /polar pos2 (while in a world)", NamedTextColor.RED))
             );
@@ -75,9 +75,9 @@ public class WandCommand {
     }
 
     protected static int wand(CommandContext<CommandSourceStack> ctx) {
-        CommandSender sender = ctx.getSource().getSender();
+        CommandSender sender = ctx.getSource().getBukkitSender();
         if (!(sender instanceof Player player)) {
-            ctx.getSource().getSender().sendMessage(
+            ctx.getSource().getBukkitSender().sendMessage(
                     Component.text()
                             .append(Component.text("Usage: /polar wand (while in a world)", NamedTextColor.RED))
             );

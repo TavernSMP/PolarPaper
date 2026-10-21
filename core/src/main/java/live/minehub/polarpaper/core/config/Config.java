@@ -54,21 +54,19 @@ public record Config(
     private static final Logger LOGGER = LoggerFactory.getLogger(Config.class);
 
     private static final Map<String, Object> DEFAULT_GAMERULES = new HashMap<>() {{
-        put("spawn_mobs", false);
-        put("fire_spread_radius_around_player", 0);
-        put("random_tick_speed", 0);
-        put("mob_griefing", false);
-        put("spread_vines", false);
-        put("tnt_explodes", false);
+        put("doMobSpawning", false);
+        put("doFireTick", false);
+        put("randomTickSpeed", 0);
+        put("mobGriefing", false);
+        put("doVinesSpread", false);
         put("blockFade", false); // custom gamerule
         put("blockPhysics", true); // custom gamerule
         put("blockGravity", true); // custom gamerule
         put("liquidPhysics", true); // custom gamerule
 
         // paper default gamerules, put here to remove clutter when saving other worlds
-        put("max_command_sequence_length", 65536);
-        put("max_block_modifications", 32768);
-        put("max_command_forks", 65536);
+        put("maxCommandChainLength", 65536);
+        put("commandModificationBlockLimit", 32768);
     }};
 
     private static final List<Property<?>> PROPERTIES = List.of(
@@ -194,14 +192,14 @@ public record Config(
                     .environment(world.getEnvironment());
 
             for (String name : world.getGameRules()) {
-                GameRule<?> gamerule = Registry.GAME_RULE.get(Key.key("minecraft", name));
+                GameRule<?> gamerule = GameRule.getByName(name);
                 if (gamerule == null) {
                     LOGGER.warn("Invalid gamerule: {}", name);
                     continue;
                 }
 
                 Object gameRuleValue = world.getGameRuleValue(gamerule);
-                Object gameRuleDefault = world.getGameRuleDefault(gamerule); // 1.21.11 depends on this deprecated method
+                Object gameRuleDefault = world.getGameRuleDefault(gamerule);
                 if (gameRuleValue != gameRuleDefault) {
                     gamerule(name, gameRuleValue);
                 } else {

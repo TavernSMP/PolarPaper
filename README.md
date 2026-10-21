@@ -1,48 +1,37 @@
-<div align="center">
-<img width="150" height="150" alt="polar-logo" src="https://github.com/user-attachments/assets/84a8df1c-52c9-42e9-8446-fab7192e5aac" />
- 
-# Polar world format for Paper
-</div>
+# PolarPaper for Paper 1.20.1
 
-[![](https://dcbadge.limes.pink/api/server/n7fp52auB7)](https://discord.gg/n7fp52auB7)
+This is TavernSMP's `1_20_1` backport of PolarPaper. It requires **Paper 1.20.1 and Java 25**. The world-creation adapter follows the upstream 1.21.11 adapter's no-save design and uses the actual 1.20.1 server signatures. This branch targets Paper; Folia and other Minecraft versions are not supported.
 
+Polar stores an arena, lobby, or other small world in a single `.polar` file. It holds the world in memory and saves only when requested or configured. Worlds may be stored in files or another `PolarSource` implementation.
 
-Polar is a world format very similar to Slime, with the same advantages:
- - Small file sizes (see [SLIME_COMPARISON](SLIME_COMPARISON.md))
- - Single file world
- - Immutable (worlds do not save until explicitly requested)
- - Store worlds wherever (whether as a file or in a database)
- - Great for lobbies and game arenas
- - Fast loading and saving
+## Build and install
 
-Polar is also a single plugin and so doesn't require a Paper fork or classloaders 
+Use a Java 25 JDK and the included Gradle wrapper:
 
-Polar currently supports versions 26.3 - 1.21.11, and requires minimum Java 25
+```powershell
+.\gradlew.bat clean build --no-daemon
+```
 
-### [Download the latest jar](https://github.com/MinehubMC/PolarPaper/releases/latest)
+Install the single plugin JAR from `dist/`. Gradle remaps it to the Spigot mappings used by Paper 1.20.1. JARs in `build/libs/` include development and source artifacts; use `dist/` for deployment. The separate acceptance harness is for isolated tests only.
 
-Polar was originally developed for [Minestom](https://github.com/Minestom/Minestom)! See the Minestom library [here](https://github.com/hollow-cube/polar)
+On Linux, use `bash gradlew clean build --no-daemon`. Set `GRADLE_USER_HOME` and `java.io.tmpdir` to a suitable build disk if needed. The first build downloads the Paper development bundle; the first server start resolves the ZSTD library through the plugin loader.
 
-## Large worlds
-Polar is not designed for large worlds! 
+Optional WorldEdit integration targets WorldEdit 7.2.15. The plugin loads without WorldEdit.
 
-Polar is most useful when the whole world is mostly within render distance. The entire world is held in memory as a trade-off to allow for faster loading. This means the size/number of worlds you can load depends on how much RAM you have available. 
+## Commands
 
-If you need large worlds, it's likely Anvil (the default world format) will be more useful.
+Use `/polar help` for command syntax. The main flow is `/polar createblank <name>`, build in the world, `/polar save <name>`, `/polar unload <name>`, and `/polar load <name>.polar`. `/polar convert` converts the region around a player in an existing vanilla world. Copy, schematic placement, selection wand, spawn settings, gamerules, and relighting remain available.
 
-## Permissions
-Permission nodes are simply `polarpaper.<subcommand>`, for example: `polarpaper.info` for `/polar info`
+Permissions use `polarpaper.<subcommand>`, for example `polarpaper.save`, plus `polarpaper.use` for the root command. The selection wand uses a blaze rod, which exists in 1.20.1.
 
-`polarpaper.use` for the root command (/polar)
+## World compatibility
 
-## Custom gamerules
-Polar provides a few custom gamerules that can be defined in the config:
-| Name          | Type    | Description                                                                                                |
-| ------------- | ------- | ---------------------------------------------------------------------------------------------------------- |
-| blockPhysics  | Boolean | Controls block placement/interaction rules                                                                 |
-| blockGravity  | Boolean | Allow gravity blocks to fall (sand, gravel)                                                                |
-| liquidPhysics | Boolean | Allow lava/water to flow                                                                                   |
-| blockFade     | Boolean | Controls block fading or disappearing (e.g. snow/ice melting, fire burning out, coral death, turtle eggs)  |
+The Polar v7 container layout remains unchanged. The branch preserves supported blocks and biomes, block entities and inventories, entity/passenger data, item and chunk persistent data, sign text, and stored lighting. It writes Minecraft 1.20.1's data version, 3465. Loading a world with a newer Minecraft data version is rejected; this backport does not downgrade newer blocks, entities, items, or NBT.
 
-# API
-[See the wiki](https://github.com/MinehubMC/PolarPaper/wiki)
+Gamerules use the 1.20.1 names, such as `doMobSpawning`, `doFireTick`, `randomTickSpeed`, and `mobGriefing`. Custom physics rules are configured in `config.yml`. The `/polar version` link points to this backport branch.
+
+## Validation
+
+See [integration-tests/README.md](integration-tests/README.md) for the runnable localhost-only Paper 1.20.1 acceptance harness. It exercises the plugin API and ordinary commands, saves and reloads data, then verifies a second server start. Keep world backups when evaluating a new build.
+
+Upstream project: [MinehubMC/PolarPaper](https://github.com/MinehubMC/PolarPaper). Polar originated in [hollow-cube/polar](https://github.com/hollow-cube/polar). See [LICENSE](LICENSE) for the MIT license.

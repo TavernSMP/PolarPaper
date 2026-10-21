@@ -1,11 +1,11 @@
 package live.minehub.polarpaper.core.world;
 
-import ca.spottedleaf.concurrentutil.util.Priority;
-import ca.spottedleaf.moonrise.patches.chunk_system.level.entity.ChunkEntitySlices;
-import ca.spottedleaf.moonrise.patches.chunk_system.scheduling.ChunkHolderManager;
-import ca.spottedleaf.moonrise.patches.chunk_system.scheduling.NewChunkHolder;
-import ca.spottedleaf.moonrise.patches.starlight.light.SWMRNibbleArray;
-import ca.spottedleaf.moonrise.patches.starlight.light.StarLightEngine;
+import ca.spottedleaf.concurrentutil.executor.standard.PrioritisedExecutor.Priority;
+import io.papermc.paper.world.ChunkEntitySlices;
+import io.papermc.paper.chunk.system.scheduling.ChunkHolderManager;
+import io.papermc.paper.chunk.system.scheduling.NewChunkHolder;
+import ca.spottedleaf.starlight.common.light.SWMRNibbleArray;
+import ca.spottedleaf.starlight.common.light.StarLightEngine;
 import live.minehub.polarpaper.core.generator.ChunkUtils;
 import live.minehub.polarpaper.core.util.*;
 import net.minecraft.core.BlockPos;
@@ -23,13 +23,13 @@ import net.minecraft.world.level.biome.Biome;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.chunk.*;
-import net.minecraft.world.level.chunk.status.ChunkStatus;
+import net.minecraft.world.level.chunk.ChunkStatus;
 import net.minecraft.world.level.lighting.LevelLightEngine;
 import net.minecraft.world.ticks.LevelChunkTicks;
 import org.bukkit.Bukkit;
 import org.bukkit.World;
-import org.bukkit.craftbukkit.CraftServer;
-import org.bukkit.craftbukkit.CraftWorld;
+import org.bukkit.craftbukkit.v1_20_R1.CraftServer;
+import org.bukkit.craftbukkit.v1_20_R1.CraftWorld;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -115,10 +115,10 @@ public record PolarChunk(
                 Boolean bool = emptinessMap[i];
                 emptinessMapPrim[i] = bool != null && bool;
             }
-            chunk.starlight$setBlockEmptinessMap(emptinessMapPrim);
-            chunk.starlight$setSkyEmptinessMap(emptinessMapPrim);
-            chunk.starlight$setSkyNibbles(skyNibbles);
-            chunk.starlight$setBlockNibbles(blockNibbles);
+            chunk.setBlockEmptinessMap(emptinessMapPrim);
+            chunk.setSkyEmptinessMap(emptinessMapPrim);
+            chunk.setSkyNibbles(skyNibbles);
+            chunk.setBlockNibbles(blockNibbles);
         } else {
             ChunkUtils.lightChunk(serverLevel, chunk);
         }
@@ -163,7 +163,7 @@ public record PolarChunk(
 
         ServerLevel serverLevel = ((CraftWorld) world).getHandle();
 
-        ChunkHolderManager chunkHolderManager = serverLevel.moonrise$getChunkTaskScheduler().chunkHolderManager;
+        ChunkHolderManager chunkHolderManager = serverLevel.chunkTaskScheduler.chunkHolderManager;
         NewChunkHolder chunkHolder = chunkHolderManager.getChunkHolder(chunkX, chunkZ);
         if (chunkHolder != null && chunkHolder.getCurrentChunk() != null) {
             if (isChunkEmpty(chunkHolder)) return CompletableFuture.completedFuture(null);
@@ -186,7 +186,7 @@ public record PolarChunk(
 
         // FULL required when saving light; FEATURES sufficient otherwise
         ChunkStatus status = saveLight ? ChunkStatus.FULL : ChunkStatus.FEATURES;
-        serverLevel.moonrise$getChunkTaskScheduler().scheduleChunkLoad(chunkX, chunkZ, status, true, Priority.LOW, chunkAccess -> {
+        serverLevel.chunkTaskScheduler.scheduleChunkLoad(chunkX, chunkZ, status, true, Priority.LOW, chunkAccess -> {
             NewChunkHolder chunkHolder2 = chunkHolderManager.getChunkHolder(chunkX, chunkZ);
             if (isChunkEmpty(chunkHolder2)) {
                 future.complete(null);
@@ -214,10 +214,10 @@ public record PolarChunk(
         ServerLevel serverLevel = ((CraftWorld) world).getHandle();
         LevelLightEngine lightEngine = saveLight ? serverLevel.getLightEngine() : null;
 
-        Registry<Biome> biomeRegistry = MinecraftServer.getServer().registryAccess().lookupOrThrow(Registries.BIOME);
+        Registry<Biome> biomeRegistry = MinecraftServer.getServer().registryAccess().registryOrThrow(Registries.BIOME);
 
         int sectionCount = chunkAccess.getSectionsCount();
-        int minSection = chunkAccess.getMinSectionY();
+        int minSection = chunkAccess.getMinSection();
 
         PolarSection[] sections = new PolarSection[sectionCount];
         for (int i = 0; i < sectionCount; i++) {
@@ -238,9 +238,9 @@ public record PolarChunk(
                     if (blockEntity == null) continue;
                     if (!blockSelector.test(blockPos.getX(), blockPos.getY(), blockPos.getZ())) continue;
 
-                    CompoundTag compoundTag = blockEntity.saveWithFullMetadata(registryAccess);
+                    CompoundTag compoundTag = blockEntity.saveWithFullMetadata();
 
-                    Optional<String> id = compoundTag.getString("id");
+                    String id = compoundTag.getString("id");
                     if (id.isEmpty()) {
                         LOGGER.warn("No ID in block entity data at: {}", blockPos);
                         LOGGER.warn("Compound tag: {}", compoundTag);
@@ -248,7 +248,7 @@ public record PolarChunk(
                     }
 
                     int index = CoordConversion.chunkBlockIndex(blockPos.getX(), blockPos.getY(), blockPos.getZ());
-                    polarBlockEntities.add(new BlockEntity(index, id.get(), compoundTag));
+                    polarBlockEntities.add(new BlockEntity(index, id, compoundTag));
                     blockEntities.put(blockPos, blockEntity);
                 }
 
@@ -262,27 +262,19 @@ public record PolarChunk(
         int[][] heightMaps = new int[PolarChunk.MAX_HEIGHTMAPS][0];
         worldAccess.saveHeightmaps(chunkAccess, heightMaps);
 
-        List<net.minecraft.world.entity.Entity> allEntities = entityChunk == null ? List.of() : entityChunk.getAllEntities();
+        List<net.minecraft.world.entity.Entity> allEntities = entityChunk == null ? List.of() : ChunkUtils.getEntities(entityChunk);
         List<org.bukkit.entity.Entity> newAllEntities = new ArrayList<>();
         for (net.minecraft.world.entity.Entity ent : allEntities) {
             if (blockSelector.test(ent.getBlockX(), ent.getBlockY(), ent.getBlockZ())) newAllEntities.add(ent.getBukkitEntity());
         }
         org.bukkit.entity.Entity[] entitiesArray = newAllEntities.toArray(new org.bukkit.entity.Entity[0]);
 
-        byte[] userData;
-        try (var writer = new MemorySegmentWriter(256)) {
-            worldAccess.saveChunkData(chunkAccess, blockEntities, entitiesArray, writer);
-            userData = writer.getWrittenBytes();
-        }
-
-        return future.thenApply(_ -> new PolarChunk(
-                chunkX,
-                chunkZ,
-                sections,
-                polarBlockEntities.toArray(new BlockEntity[0]),
-                heightMaps,
-                userData
-        )).exceptionally(e -> {
+        return future.thenApply(ignored -> {
+            try (MemorySegmentWriter writer = new MemorySegmentWriter(256)) {
+                worldAccess.saveChunkData(chunkAccess, blockEntities, entitiesArray, writer);
+                return new PolarChunk(chunkX, chunkZ, sections, polarBlockEntities.toArray(new BlockEntity[0]), heightMaps, writer.getWrittenBytes());
+            }
+        }).exceptionally(e -> {
             LOGGER.error("Failed to convert chunk", e);
             return null;
         });
@@ -306,10 +298,10 @@ public record PolarChunk(
         if (chunkAccessSection.hasOnlyAir()) return createEmptySection(chunkX, chunkZ, minSection, sectionI, lightEngine);
 
         PalettedContainer<BlockState> states = chunkAccessSection.getStates().copy();
-        PalettedContainer<Holder<Biome>> biomes = chunkAccessSection.getBiomes().copy();
+        PalettedContainer<Holder<Biome>> biomes = ((PalettedContainer<Holder<Biome>>) chunkAccessSection.getBiomes()).copy();
 
-        int blocksSize = states.data.storage().getSize();
-        int biomesSize = biomes.data.storage().getSize();
+        int blocksSize = 4096;
+        int biomesSize = 64;
 
         // blocks
         Map<BlockState, Integer> blockIds = new LinkedHashMap<>();
@@ -376,7 +368,7 @@ public record PolarChunk(
 
         // if any entities that should be saved, return false
         if (entityChunk != null) {
-            for (net.minecraft.world.entity.Entity nmsEntity : entityChunk.getAllEntities()) {
+            for (net.minecraft.world.entity.Entity nmsEntity : ChunkUtils.getEntities(entityChunk)) {
                 if (!nmsEntity.shouldBeSaved()) continue;
                 return false;
             }

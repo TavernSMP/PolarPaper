@@ -1,10 +1,10 @@
 package live.minehub.polarpaper.commands;
 
-import ca.spottedleaf.moonrise.patches.chunk_system.scheduling.NewChunkHolder;
+import io.papermc.paper.chunk.system.scheduling.NewChunkHolder;
 import com.mojang.brigadier.Command;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import com.mojang.brigadier.context.CommandContext;
-import io.papermc.paper.command.brigadier.CommandSourceStack;
+import net.minecraft.commands.CommandSourceStack;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.TextComponent;
 import net.kyori.adventure.text.format.NamedTextColor;
@@ -12,9 +12,9 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ThreadedLevelLightEngine;
 import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.chunk.ChunkAccess;
-import net.minecraft.world.level.chunk.status.ChunkStatus;
+import net.minecraft.world.level.chunk.ChunkStatus;
 import org.bukkit.command.CommandSender;
-import org.bukkit.craftbukkit.CraftWorld;
+import org.bukkit.craftbukkit.v1_20_R1.CraftWorld;
 import org.bukkit.entity.Player;
 
 import java.text.DecimalFormat;
@@ -32,7 +32,7 @@ public class RelightCommand extends PolarCmd {
 
     @Override
     protected int executeDefault(CommandContext<CommandSourceStack> ctx) {
-        if (!(ctx.getSource().getSender() instanceof Player player)) return Command.SINGLE_SUCCESS;
+        if (!(ctx.getSource().getBukkitSender() instanceof Player player)) return Command.SINGLE_SUCCESS;
 
         ServerLevel world = ((CraftWorld) player.getWorld()).getHandle();
         ThreadedLevelLightEngine lightEngine = world.getChunkSource().getLightEngine();
@@ -45,7 +45,7 @@ public class RelightCommand extends PolarCmd {
     private void starlightFixLight(CommandSender sender, ServerLevel world, ThreadedLevelLightEngine lightEngine) {
         long start = System.nanoTime();
 
-        List<NewChunkHolder> chunkHolders = world.moonrise$getChunkTaskScheduler().chunkHolderManager.getChunkHolders();
+        List<NewChunkHolder> chunkHolders = world.chunkTaskScheduler.chunkHolderManager.getChunkHolders();
 
         LinkedHashSet<ChunkPos> chunks = new LinkedHashSet<>();
 
@@ -57,8 +57,8 @@ public class RelightCommand extends PolarCmd {
 
         while (iterator.hasNext()) {
             ChunkPos chunkPos = iterator.next();
-            ChunkAccess chunk = (ChunkAccess) world.getChunkSource().getChunkForLighting(chunkPos.x(), chunkPos.z());
-            if (chunk != null && chunk.isLightCorrect() && chunk.getPersistedStatus().isOrAfter(ChunkStatus.LIGHT)) {
+            ChunkAccess chunk = (ChunkAccess) world.getChunkSource().getChunkForLighting(chunkPos.x, chunkPos.z);
+            if (chunk != null && chunk.isLightCorrect() && chunk.getStatus().isOrAfter(ChunkStatus.LIGHT)) {
                 pending[0]++;
             } else {
                 iterator.remove();
@@ -67,7 +67,7 @@ public class RelightCommand extends PolarCmd {
 
         long[] lastSentMsg = new long[1];
         int[] relitChunks = new int[1];
-        lightEngine.starlight$serverRelightChunks(chunks, _ -> {
+        lightEngine.relight(chunks, _ -> {
             relitChunks[0]++;
 
             if (lastSentMsg[0] > System.currentTimeMillis()) return;

@@ -4,13 +4,13 @@ import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import com.mojang.brigadier.builder.RequiredArgumentBuilder;
 import com.mojang.brigadier.context.CommandContext;
-import io.papermc.paper.command.brigadier.CommandSourceStack;
-import io.papermc.paper.command.brigadier.Commands;
+import net.minecraft.commands.CommandSourceStack;
+import net.minecraft.commands.Commands;
 import live.minehub.polarpaper.PolarPaper;
 import live.minehub.polarpaper.core.generator.PolarGenerator;
 import live.minehub.polarpaper.util.Format;
-import net.minecraft.commands.arguments.IdentifierArgument;
-import net.minecraft.resources.Identifier;
+import net.minecraft.commands.arguments.ResourceLocationArgument;
+import net.minecraft.resources.ResourceLocation;
 import org.bukkit.Bukkit;
 import org.bukkit.World;
 import org.jetbrains.annotations.Nullable;
@@ -38,7 +38,7 @@ public abstract class PolarCmd {
 
     public void registerCommand(LiteralArgumentBuilder<CommandSourceStack> rootBuilder) {
         LiteralArgumentBuilder<CommandSourceStack> commandArgument = Commands.literal(getName())
-                .requires(source -> source.getSender().hasPermission(getPermission()))
+                .requires(source -> source.getBukkitSender().hasPermission(getPermission()))
                 .executes(this::executeDefault);
 
         addToBuilder(commandArgument);
@@ -91,8 +91,8 @@ public abstract class PolarCmd {
         return CACHED_WORLDS_FOLDER;
     }
 
-    public RequiredArgumentBuilder<CommandSourceStack, Identifier> createWorldNameArgument(boolean onlyPolar) {
-        return Commands.argument("world name", IdentifierArgument.id())
+    public RequiredArgumentBuilder<CommandSourceStack, ResourceLocation> createWorldNameArgument(boolean onlyPolar) {
+        return Commands.argument("world name", ResourceLocationArgument.id())
                 .suggests((_, s) -> {
                     for (World world : Bukkit.getWorlds()) {
                         if (onlyPolar) {
@@ -100,7 +100,7 @@ public abstract class PolarCmd {
                             if (polarGenerator == null) continue;
                         }
 
-                        String worldKey = world.getKey().toString().replace(PolarPaper.getPlugin().namespace() + ":", "");
+                        String worldKey = world.getKey().toString().replace(PolarPaper.getPlugin().getName().toLowerCase(java.util.Locale.ROOT) + ":", "");
 
                         if (!worldKey.toLowerCase().startsWith(s.getRemainingLowerCase())
                             && !world.getKey().getKey().toLowerCase().startsWith(s.getRemainingLowerCase())) continue;

@@ -1,13 +1,11 @@
 [versions]
 zstd = "0.2"
 paperweight = "2.0.0-beta.21"
-weaver = "2.4.5"
 run = "3.1.0"
 resource = "1.3.1"
-minecraft = "26.3"
-hangar-publish = "0.1.3"
+minecraft = "1.20.1"
 shadow = "9.4.2"
-worldedit = "7.4.5"
+worldedit = "7.2.15"
 
 [libraries]
 zstd = { module = "dev.hallock.zstd:zstd-java", version.ref = "zstd" }
@@ -15,8 +13,6 @@ worldedit = { module = "com.sk89q.worldedit:worldedit-bukkit", version.ref = "wo
 
 [plugins]
 paperweight-userdev = { id = "io.papermc.paperweight.userdev", version.ref = "paperweight" }
-weaver-userdev = { id = "io.canvasmc.weaver.userdev", version.ref = "weaver" }
 run = { id = "xyz.jpenilla.run-paper", version.ref = "run" }
 resource-paper = { id = "xyz.jpenilla.resource-factory-paper-convention", version.ref = "resource" }
-hangar-publish = { id = "io.papermc.hangar-publish-plugin", version.ref = "hangar-publish" }
 shadow = { id = "com.gradleup.shadow", version.ref = "shadow" }

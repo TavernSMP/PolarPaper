@@ -22,7 +22,7 @@ public class BlockCodec {
         return STRING_TO_BLOCK.computeIfAbsent(string, a -> {
             try {
                 StringReader reader = new StringReader(a);
-                BlockState state = BlockStateParser.parseForBlock(BuiltInRegistries.BLOCK, reader, false).blockState();
+                BlockState state = BlockStateParser.parseForBlock(BuiltInRegistries.BLOCK.asLookup(), reader, false).blockState();
                 if (reader.canRead()) throw new IllegalArgumentException("Trailing data: " + reader.getRemaining());
                 BLOCK_TO_STRING.put(state, string); // populate opposite map
                 return state;

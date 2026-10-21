@@ -4,8 +4,8 @@ import com.mojang.brigadier.Command;
 import com.mojang.brigadier.arguments.BoolArgumentType;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import com.mojang.brigadier.context.CommandContext;
-import io.papermc.paper.command.brigadier.CommandSourceStack;
-import io.papermc.paper.command.brigadier.Commands;
+import net.minecraft.commands.CommandSourceStack;
+import net.minecraft.commands.Commands;
 import live.minehub.polarpaper.PolarPaper;
 import live.minehub.polarpaper.core.config.Config;
 import live.minehub.polarpaper.core.generator.PolarGenerator;
@@ -14,7 +14,7 @@ import live.minehub.polarpaper.nms.VersionUtil;
 import live.minehub.polarpaper.util.WorldKey;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
-import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceLocation;
 import org.bukkit.World;
 
 import java.util.concurrent.CompletableFuture;
@@ -26,21 +26,21 @@ public class UnloadCommand extends PolarCmd {
     }
 
     protected static int run(CommandContext<CommandSourceStack> ctx) {
-        Identifier worldId = ctx.getArgument("world name", Identifier.class);
+        ResourceLocation worldId = ctx.getArgument("world name", ResourceLocation.class);
         unload(ctx, worldId, false, false);
         return Command.SINGLE_SUCCESS;
     }
 
     protected static int runOverrided(CommandContext<CommandSourceStack> ctx) {
-        Identifier worldId = ctx.getArgument("world name", Identifier.class);
+        ResourceLocation worldId = ctx.getArgument("world name", ResourceLocation.class);
         Boolean override = ctx.getArgument("save", Boolean.class);
         unload(ctx, worldId, true, override);
         return Command.SINGLE_SUCCESS;
     }
 
-    protected static CompletableFuture<Boolean> unload(CommandContext<CommandSourceStack> ctx, Identifier worldId, boolean saveOverrided, boolean save) {
+    protected static CompletableFuture<Boolean> unload(CommandContext<CommandSourceStack> ctx, ResourceLocation worldId, boolean saveOverrided, boolean save) {
         if (FoliaUtil.isFolia() && !FoliaUtil.isCanvas()) {
-            ctx.getSource().getSender().sendMessage(
+            ctx.getSource().getBukkitSender().sendMessage(
                     Component.text()
                             .append(Component.text("Unloading worlds is not supported on Folia!", NamedTextColor.RED))
             );
@@ -49,7 +49,7 @@ public class UnloadCommand extends PolarCmd {
 
         World bukkitWorld = WorldKey.getWorld(worldId);
         if (bukkitWorld == null) {
-            ctx.getSource().getSender().sendMessage(
+            ctx.getSource().getBukkitSender().sendMessage(
                     Component.text()
                             .append(Component.text("World '", NamedTextColor.RED))
                             .append(Component.text(worldId.getPath(), NamedTextColor.RED))
@@ -60,7 +60,7 @@ public class UnloadCommand extends PolarCmd {
 
         PolarGenerator generator = PolarGenerator.fromWorld(bukkitWorld);
         if (generator == null) {
-            ctx.getSource().getSender().sendMessage(
+            ctx.getSource().getBukkitSender().sendMessage(
                     Component.text()
                             .append(Component.text("World '", NamedTextColor.RED))
                             .append(Component.text(worldId.getPath(), NamedTextColor.RED))
@@ -84,9 +84,9 @@ public class UnloadCommand extends PolarCmd {
             });
         } else {
             if (saveOverrided) {
-                ctx.getSource().getSender().sendMessage(Component.text("Save force disabled, world will not be saved before unload", NamedTextColor.AQUA));
+                ctx.getSource().getBukkitSender().sendMessage(Component.text("Save force disabled, world will not be saved before unload", NamedTextColor.AQUA));
             } else {
-                ctx.getSource().getSender().sendMessage(Component.text("Autosave and save on stop is disabled, world will not be saved before unload", NamedTextColor.AQUA));
+                ctx.getSource().getBukkitSender().sendMessage(Component.text("Autosave and save on stop is disabled, world will not be saved before unload", NamedTextColor.AQUA));
             }
 
             return bukkitUnload(ctx, bukkitWorld);
@@ -98,7 +98,7 @@ public class UnloadCommand extends PolarCmd {
         return VersionUtil.getWorldUnloader().unloadWorld(PolarPaper.getPlugin(), bukkitWorld).handle((success, ex) -> {
             if (!success || ex != null) {
                 if (!bukkitWorld.getPlayers().isEmpty()) {
-                    ctx.getSource().getSender().sendMessage(
+                    ctx.getSource().getBukkitSender().sendMessage(
                             Component.text()
                                     .append(Component.text("There are still players in '", NamedTextColor.RED))
                                     .append(Component.text(worldName, NamedTextColor.RED))
@@ -107,7 +107,7 @@ public class UnloadCommand extends PolarCmd {
                     return false;
                 }
 
-                ctx.getSource().getSender().sendMessage(
+                ctx.getSource().getBukkitSender().sendMessage(
                         Component.text()
                                 .append(Component.text("Failed to unload '", NamedTextColor.RED))
                                 .append(Component.text(worldName, NamedTextColor.RED))
@@ -117,7 +117,7 @@ public class UnloadCommand extends PolarCmd {
                 return false;
             }
 
-            ctx.getSource().getSender().sendMessage(
+            ctx.getSource().getBukkitSender().sendMessage(
                     Component.text()
                             .append(Component.text("Unloaded '", NamedTextColor.AQUA))
                             .append(Component.text(worldName, NamedTextColor.AQUA))
@@ -130,7 +130,7 @@ public class UnloadCommand extends PolarCmd {
 
     @Override
     protected int executeDefault(CommandContext<CommandSourceStack> ctx) {
-        ctx.getSource().getSender().sendMessage(
+        ctx.getSource().getBukkitSender().sendMessage(
                 Component.text()
                         .append(Component.text("Usage: /polar unload <worldname> [save]", NamedTextColor.RED))
                         .append(Component.text("Setting save will override config", NamedTextColor.RED))

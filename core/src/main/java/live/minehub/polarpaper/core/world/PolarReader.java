@@ -1,6 +1,6 @@
 package live.minehub.polarpaper.core.world;
 
-import ca.spottedleaf.moonrise.patches.starlight.light.SWMRNibbleArray;
+import ca.spottedleaf.starlight.common.light.SWMRNibbleArray;
 import dev.hallock.zstd.Zstd;
 import live.minehub.polarpaper.core.source.PolarSource;
 import live.minehub.polarpaper.core.util.LightUtil;
@@ -74,6 +74,7 @@ public class PolarReader {
                 PolarConstants.validatePolarVersion(version);
 
                 this.dataVersion = reader.readVarInt();
+                dataConverter.validateDataVersion(this.dataVersion);
 
                 var compressionByte = reader.readByte();
                 PolarWorld.CompressionType compression = PolarWorld.CompressionType.fromId(compressionByte);
@@ -212,24 +213,6 @@ public class PolarReader {
         );
     }
 
-    private static void fixSignNBT(CompoundTag nbt) {
-        CompoundTag frontCompound = nbt.getCompound("front_text").orElse(null);
-        CompoundTag backCompound = nbt.getCompound("back_text").orElse(null);
-        if (frontCompound == null || backCompound == null) return;
-        fixSignMessages(frontCompound.getListOrEmpty("messages"));
-        fixSignMessages(backCompound.getListOrEmpty("messages"));
-    }
-
-    private static void fixSignMessages(ListTag messages) {
-        for (Tag message : messages) {
-            String string = message.asString().orElse(null);
-            if (!"\"\"".equalsIgnoreCase(string)) return;
-        }
-        for (int i = 0; i < messages.size(); i++) {
-            messages.set(i, StringTag.valueOf(""));
-        }
-    }
-
     public static PolarChunk.BlockEntity readBlockEntity(PolarDataConverter dataConverter, int dataVersion, MemorySegmentReader reader) {
         int posIndex = reader.readInt();
         String id = reader.readOptionalString();
@@ -237,11 +220,10 @@ public class PolarReader {
         CompoundTag nbt = new CompoundTag();
         if (reader.readByte() == 1) {
             try {
-                nbt = (CompoundTag) NbtIo.readAnyTag(reader, NbtAccounter.uncompressedQuota());
+                nbt = (CompoundTag) live.minehub.polarpaper.core.util.LegacyNbt.readAnyTag(reader, NbtAccounter.UNLIMITED);
             } catch (IOException e) {
                 throw new RuntimeException(e);
             }
-            fixSignNBT(nbt);
         }
 
         if (dataVersion < dataConverter.dataVersion()) {

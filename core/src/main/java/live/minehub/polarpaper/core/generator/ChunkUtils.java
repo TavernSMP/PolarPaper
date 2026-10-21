@@ -1,16 +1,14 @@
 package live.minehub.polarpaper.core.generator;
 
 import ca.spottedleaf.concurrentutil.lock.ReentrantAreaLock;
-import ca.spottedleaf.concurrentutil.util.ConcurrentUtil;
-import ca.spottedleaf.moonrise.common.util.WorldUtil;
-import ca.spottedleaf.moonrise.patches.chunk_system.level.entity.ChunkEntitySlices;
-import ca.spottedleaf.moonrise.patches.chunk_system.scheduling.ChunkHolderManager;
-import ca.spottedleaf.moonrise.patches.chunk_system.scheduling.ChunkTaskScheduler;
-import ca.spottedleaf.moonrise.patches.chunk_system.scheduling.NewChunkHolder;
-import ca.spottedleaf.moonrise.patches.starlight.light.SWMRNibbleArray;
-import ca.spottedleaf.moonrise.patches.starlight.light.StarLightEngine;
-import ca.spottedleaf.moonrise.patches.starlight.light.StarLightInterface;
-import io.papermc.paper.FeatureHooks;
+import io.papermc.paper.util.WorldUtil;
+import io.papermc.paper.world.ChunkEntitySlices;
+import io.papermc.paper.chunk.system.scheduling.ChunkHolderManager;
+import io.papermc.paper.chunk.system.scheduling.ChunkTaskScheduler;
+import io.papermc.paper.chunk.system.scheduling.NewChunkHolder;
+import ca.spottedleaf.starlight.common.light.SWMRNibbleArray;
+import ca.spottedleaf.starlight.common.light.StarLightEngine;
+import ca.spottedleaf.starlight.common.light.StarLightInterface;
 import live.minehub.polarpaper.core.util.CoordConversion;
 import live.minehub.polarpaper.core.util.TaskFutures;
 import live.minehub.polarpaper.core.world.NoUnloadLevelChunk;
@@ -20,18 +18,14 @@ import net.minecraft.nbt.CompoundTag;
 import net.minecraft.server.level.FullChunkStatus;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ThreadedLevelLightEngine;
-import net.minecraft.util.ProblemReporter;
 import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.block.EntityBlock;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.chunk.ChunkAccess;
 import net.minecraft.world.level.chunk.LevelChunk;
-import net.minecraft.world.level.chunk.status.ChunkStatus;
+import net.minecraft.world.level.chunk.ChunkStatus;
 import net.minecraft.world.level.levelgen.Heightmap;
-import net.minecraft.world.level.storage.TagValueInput;
-import org.bukkit.Bukkit;
-import org.bukkit.craftbukkit.CraftServer;
 import org.bukkit.plugin.Plugin;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
@@ -50,16 +44,16 @@ public class ChunkUtils {
     private static final Logger LOGGER = LoggerFactory.getLogger(ChunkUtils.class);
 
     private static final MethodHandle GET_OR_CREATE_CHUNK_HOLDER_HANDLE;
+    private static final MethodHandle GET_ENTITIES_HANDLE;
     private static final VarHandle CURRENT_CHUNK_HANDLE;
     private static final VarHandle CURRENT_GEN_STATUS_HANDLE;
-    private static final VarHandle CHUNK_COMPLETIONS_HANDLE;
     private static final VarHandle LAST_CHUNK_COMPLETION_HANDLE;
     private static final VarHandle ENTITY_CHUNK_HANDLE;
-    private static final VarHandle CHUNK_COMPLETION_ARRAY_HANDLE = ConcurrentUtil.getArrayHandle(NewChunkHolder.ChunkCompletion[].class);
-    private static final ChunkStatus[] ALL_STATUSES = ChunkStatus.getStatusList().toArray(new ChunkStatus[0]);
+    private static final VarHandle SCHEDULING_LOCK_HANDLE;
 
     static {
         try {
+            GET_ENTITIES_HANDLE = MethodHandles.privateLookupIn(ChunkEntitySlices.class, MethodHandles.lookup()).findVirtual(ChunkEntitySlices.class, "getAllEntities", MethodType.methodType(List.class));
             GET_OR_CREATE_CHUNK_HOLDER_HANDLE = MethodHandles
                     .privateLookupIn(ChunkHolderManager.class, MethodHandles.lookup())
                     .findVirtual(ChunkHolderManager.class, "getOrCreateChunkHolder", MethodType.methodType(NewChunkHolder.class, int.class, int.class));
@@ -70,12 +64,10 @@ public class ChunkUtils {
             CURRENT_GEN_STATUS_HANDLE = MethodHandles
                     .privateLookupIn(NewChunkHolder.class, MethodHandles.lookup())
                     .findVarHandle(NewChunkHolder.class, "currentGenStatus", ChunkStatus.class);
-            CHUNK_COMPLETIONS_HANDLE = MethodHandles
-                    .privateLookupIn(NewChunkHolder.class, MethodHandles.lookup())
-                    .findVarHandle(NewChunkHolder.class, "chunkCompletions", NewChunkHolder.ChunkCompletion[].class);
             LAST_CHUNK_COMPLETION_HANDLE = MethodHandles
                     .privateLookupIn(NewChunkHolder.class, MethodHandles.lookup())
                     .findVarHandle(NewChunkHolder.class, "lastChunkCompletion", NewChunkHolder.ChunkCompletion.class);
+            SCHEDULING_LOCK_HANDLE = MethodHandles.privateLookupIn(ChunkTaskScheduler.class, MethodHandles.lookup()).findVarHandle(ChunkTaskScheduler.class, "schedulingLockArea", ReentrantAreaLock.class);
             ENTITY_CHUNK_HANDLE = MethodHandles
                     .privateLookupIn(NewChunkHolder.class, MethodHandles.lookup())
                     .findVarHandle(NewChunkHolder.class, "entityChunk", ChunkEntitySlices.class);
@@ -84,25 +76,34 @@ public class ChunkUtils {
         }
     }
 
+    @SuppressWarnings("unchecked")
+    public static List<net.minecraft.world.entity.Entity> getEntities(ChunkEntitySlices slices) {
+        try {
+            return (List<net.minecraft.world.entity.Entity>) GET_ENTITIES_HANDLE.invoke(slices);
+        } catch (Throwable failure) {
+            throw new IllegalStateException("Cannot read Paper 1.20.1 chunk entities", failure);
+        }
+    }
+
     public static void insertChunk(ServerLevel serverLevel, NoUnloadLevelChunk newLevelChunk) {
         newLevelChunk.setLightCorrect(true);
-        newLevelChunk.tryMarkSaved();
+        newLevelChunk.setUnsaved(false);
 
         int chunkX = newLevelChunk.locX;
         int chunkZ = newLevelChunk.locZ;
-        ChunkTaskScheduler chunkTaskScheduler = serverLevel.moonrise$getChunkTaskScheduler();
+        ChunkTaskScheduler chunkTaskScheduler = serverLevel.chunkTaskScheduler;
         ChunkHolderManager chunkHolderManager = chunkTaskScheduler.chunkHolderManager;
 
         // Begin reflection hell :D
         ReentrantAreaLock.Node lock = chunkHolderManager.ticketLockArea.lock(chunkX, chunkZ);
-        ReentrantAreaLock.Node lock1 = chunkTaskScheduler.schedulingLockArea.lock(chunkX, chunkZ);
+        ReentrantAreaLock.Node lock1 = ((ReentrantAreaLock) SCHEDULING_LOCK_HANDLE.get(chunkTaskScheduler)).lock(chunkX, chunkZ);
         NewChunkHolder newChunkHolder;
         try {
             newChunkHolder = (NewChunkHolder) GET_OR_CREATE_CHUNK_HOLDER_HANDLE.invokeExact(chunkHolderManager, chunkX, chunkZ);
         } catch (Throwable e) {
             throw new RuntimeException(e);
         } finally {
-            chunkTaskScheduler.schedulingLockArea.unlock(lock1);
+            ((ReentrantAreaLock) SCHEDULING_LOCK_HANDLE.get(chunkTaskScheduler)).unlock(lock1);
             chunkHolderManager.ticketLockArea.unlock(lock);
         }
 
@@ -110,19 +111,9 @@ public class ChunkUtils {
         newLevelChunk.mustNotSave = true;
         CURRENT_CHUNK_HANDLE.set(newChunkHolder, newLevelChunk);
         CURRENT_GEN_STATUS_HANDLE.set(newChunkHolder, ChunkStatus.FULL);
-        newLevelChunk.moonrise$setChunkHolder(newChunkHolder);
+        newLevelChunk.setChunkHolder(newChunkHolder);
 
-        // Populate every status up to and including FULL
-        // This mirrors what replaceProtoChunk() does, but for all statuses including FULL
-        NewChunkHolder.ChunkCompletion[] chunkCompletions = (NewChunkHolder.ChunkCompletion[]) CHUNK_COMPLETIONS_HANDLE.get(newChunkHolder);
-        for (ChunkStatus status : ALL_STATUSES) {
-            NewChunkHolder.ChunkCompletion completion = new NewChunkHolder.ChunkCompletion(newLevelChunk, status);
-            CHUNK_COMPLETION_ARRAY_HANDLE.setVolatile(chunkCompletions, status.getIndex(), completion);
-
-            if (status == ChunkStatus.FULL) {
-                LAST_CHUNK_COMPLETION_HANDLE.set(newChunkHolder, completion);
-            }
-        }
+        LAST_CHUNK_COMPLETION_HANDLE.set(newChunkHolder, new NewChunkHolder.ChunkCompletion(newLevelChunk, ChunkStatus.FULL));
 
         CompletableFuture.runAsync(() -> Heightmap.primeHeightmaps(newLevelChunk, ChunkStatus.FULL.heightmapsAfter()))
                 .exceptionally(e -> {
@@ -148,20 +139,20 @@ public class ChunkUtils {
 
     public static void lightChunk(ServerLevel level, LevelChunk chunk) {
         ThreadedLevelLightEngine threadedEngine = (ThreadedLevelLightEngine) level.getLightEngine();
-        StarLightInterface starlight = threadedEngine.starlight$getLightEngine();
+        StarLightInterface starlight = threadedEngine.theLightEngine;
         starlight.lightChunk(chunk, StarLightEngine.getEmptySectionsForChunk(chunk));
     }
 
     private static ChunkEntitySlices initializeEntityChunk(NewChunkHolder holder) {
         ChunkEntitySlices slices = new ChunkEntitySlices(
                 holder.world, holder.chunkX, holder.chunkZ, holder.getChunkStatus(),
-                holder.holderData, WorldUtil.getMinSection(holder.world), WorldUtil.getMaxSection(holder.world)
+                WorldUtil.getMinSection(holder.world), WorldUtil.getMaxSection(holder.world)
         );
         slices.setTransient(false);
 
         ENTITY_CHUNK_HANDLE.set(holder, slices);
 
-        holder.world.moonrise$getEntityLookup().entitySectionLoad(holder.chunkX, holder.chunkZ, slices);
+        holder.world.getEntityLookup().entitySectionLoad(holder.chunkX, holder.chunkZ, slices);
 
         return slices;
     }
@@ -178,9 +169,9 @@ public class ChunkUtils {
     }
 
     public static void addBlockEntity(CompoundTag tag, ChunkAccess chunk) {
-        int x = tag.getIntOr("x", 0);
-        int y = tag.getIntOr("y", 0);
-        int z = tag.getIntOr("z", 0);
+        int x = tag.getInt("x");
+        int y = tag.getInt("y");
+        int z = tag.getInt("z");
         addBlockEntity(x, y, z, tag, chunk);
     }
 
@@ -201,23 +192,19 @@ public class ChunkUtils {
             return;
         }
 
-        var registryAccess = ((CraftServer) Bukkit.getServer()).getServer().registryAccess();
-
-        try (var problemReporter = new ProblemReporter.ScopedCollector(() -> "addBlockEntity", LOGGER)) {
-            // Load NBT data into the block entity
-            blockEntity.loadWithComponents(TagValueInput.create(problemReporter, registryAccess, nbt));
-
-            if (chunk instanceof LevelChunk levelChunk) {
-                blockEntity.setLevel(levelChunk.getLevel());
-                levelChunk.addAndRegisterBlockEntity(blockEntity);
-            } else {
-                chunk.blockEntities.put(blockPos, blockEntity);
-            }
+        if (nbt != null) {
+            blockEntity.load(nbt);
+        }
+        if (chunk instanceof LevelChunk levelChunk) {
+            blockEntity.setLevel(levelChunk.getLevel());
+            levelChunk.addAndRegisterBlockEntity(blockEntity);
+        } else {
+            chunk.setBlockEntityNbt(blockEntity.saveWithFullMetadata());
         }
     }
 
     public static CompletableFuture<Void> insertEmptyChunks(Plugin plugin, ServerLevel level) {
-        int paddedViewDist = FeatureHooks.getViewDistance(level) + 2;
+        int paddedViewDist = level.getWorld().getViewDistance() + 2;
 
         List<CompletableFuture<Void>> futures = new ArrayList<>();
 
@@ -242,8 +229,8 @@ public class ChunkUtils {
         NoUnloadLevelChunk emptyChunk = new NoUnloadLevelChunk(level, new ChunkPos(x, z));
         boolean[] emptySections = new boolean[emptyChunk.getSectionsCount()];
         Arrays.fill(emptySections, true);
-        emptyChunk.starlight$setBlockEmptinessMap(emptySections.clone());
-        emptyChunk.starlight$setSkyEmptinessMap(emptySections);
+        emptyChunk.setBlockEmptinessMap(emptySections.clone());
+        emptyChunk.setSkyEmptinessMap(emptySections);
         emptyChunk.setLightCorrect(true);
         return emptyChunk;
     }

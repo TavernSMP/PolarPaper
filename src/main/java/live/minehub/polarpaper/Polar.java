@@ -20,7 +20,7 @@ import net.kyori.adventure.text.format.NamedTextColor;
 import net.minecraft.server.level.ServerLevel;
 import org.bukkit.*;
 import org.bukkit.configuration.file.FileConfiguration;
-import org.bukkit.craftbukkit.CraftWorld;
+import org.bukkit.craftbukkit.v1_20_R1.CraftWorld;
 import org.bukkit.entity.Player;
 import org.bukkit.event.world.WorldLoadEvent;
 import org.jetbrains.annotations.NotNull;
@@ -329,9 +329,9 @@ public class Polar {
         for (Map.Entry<String, Object> gamerule : config.gamerules().entrySet()) {
             NamespacedKey key = NamespacedKey.fromString(gamerule.getKey());
             if (key == null) continue;
-            GameRule<?> rule = org.bukkit.Registry.GAME_RULE.get(key);
+            GameRule<?> rule = GameRule.getByName(gamerule.getKey());
             if (rule == null) {
-                LOGGER.warn("Invalid gamerule: {}", key.asMinimalString());
+                LOGGER.warn("Invalid gamerule: {}", key.toString());
                 continue;
             }
             setGameRule(world, rule, gamerule.getValue());

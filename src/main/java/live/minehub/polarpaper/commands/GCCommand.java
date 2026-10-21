@@ -3,7 +3,7 @@ package live.minehub.polarpaper.commands;
 import com.mojang.brigadier.Command;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import com.mojang.brigadier.context.CommandContext;
-import io.papermc.paper.command.brigadier.CommandSourceStack;
+import net.minecraft.commands.CommandSourceStack;
 
 public class GCCommand extends PolarCmd {
 
@@ -13,10 +13,10 @@ public class GCCommand extends PolarCmd {
 
     @Override
     protected int executeDefault(CommandContext<CommandSourceStack> ctx) {
-        ctx.getSource().getSender().sendMessage("Running GC...");
+        ctx.getSource().getBukkitSender().sendMessage("Running GC...");
         printMemoryStats(ctx);
         System.gc();
-        ctx.getSource().getSender().sendMessage("Ran GC!");
+        ctx.getSource().getBukkitSender().sendMessage("Ran GC!");
         printMemoryStats(ctx);
 
         return Command.SINGLE_SUCCESS;
@@ -26,7 +26,7 @@ public class GCCommand extends PolarCmd {
         Runtime runtime = Runtime.getRuntime();
         long memory = runtime.totalMemory() - runtime.freeMemory();
 
-        ctx.getSource().getSender().sendMessage("Currently using %sMB".formatted(memory / (1024L * 1024L)));
+        ctx.getSource().getBukkitSender().sendMessage("Currently using %sMB".formatted(memory / (1024L * 1024L)));
     }
 
     @Override

@@ -4,16 +4,15 @@ plugins {
     java
     `maven-publish`
 
-    alias(libs.plugins.weaver.userdev)
+    alias(libs.plugins.paperweight.userdev)
     alias(libs.plugins.run)
     alias(libs.plugins.resource.paper)
-    alias(libs.plugins.hangar.publish)
     alias(libs.plugins.shadow)
 }
 
-val developmentVersion = "2.3.2"
+val developmentVersion = "2.3.2-1.20.1-SNAPSHOT"
 
-version = getVersion()
+version = providers.gradleProperty("releaseVersion").orElse(developmentVersion).get()
 group = "live.minehub"
 
 repositories {
@@ -22,23 +21,18 @@ repositories {
 }
 
 dependencies {
-    paperweight.paperDevBundle("${libs.versions.minecraft.get()}.build.+")
+    compileOnly("org.jetbrains:annotations:26.0.2")
+    compileOnly("org.jspecify:jspecify:1.0.0")
+    paperweight.paperDevBundle("${libs.versions.minecraft.get()}-R0.1-SNAPSHOT")
 
     implementation(project(":core"))
-
-    implementation(project(":paper_26_3"))
-    implementation(project(":paper_26_2"))
-    implementation(project(":paper_26_1_2"))
-    implementation(project(":paper_1_21_11"))
-
-    implementation(project(":canvas_26_2"))
+    implementation(project(":paper_1_20_1"))
 
     compileOnly(libs.zstd)
     compileOnly(libs.worldedit)
 }
 
 tasks {
-    runPaper.folia.registerTask()
     runServer {
         minecraftVersion(libs.versions.minecraft.get())
     }
@@ -68,7 +62,7 @@ java {
 }
 
 tasks.named("build") {
-    dependsOn(tasks.named("shadowJar"))
+    dependsOn(tasks.named("reobfJar"))
 }
 
 publishing {
@@ -90,7 +84,10 @@ publishing {
 
     publications {
         create<MavenPublication>("shadow") {
-            from(components["shadow"])
+            artifact(layout.buildDirectory.file("libs/${project.name}-${project.version}-reobf.jar")) {
+                builtBy("reobfJar")
+            }
+            artifact(tasks.named("sourcesJar"))
         }
     }
 }
@@ -99,23 +96,15 @@ fun isAction(): Boolean {
     return System.getenv("CI") != null
 }
 
-fun getVersion(): String {
-    return if (!isAction()) {
-        developmentVersion
-    } else {
-        project.findProperty("version") as String
-    }
-}
-
 paperPluginYaml {
     name = project.name
     version = project.version.toString()
     authors = listOf("emortaldev")
-    website = "https://github.com/MinehubMC/PolarPaper"
+    website = "https://github.com/TavernSMP/PolarPaper/tree/1_20_1"
     description = "Polar world format for Paper"
-    apiVersion = libs.versions.minecraft.get()
+    apiVersion = "1.20"
 
-    foliaSupported = true
+    foliaSupported = false
 
     main = "live.minehub.polarpaper.PolarPaper"
     loader = "live.minehub.polarpaper.PolarPaperLoader"
@@ -126,22 +115,34 @@ paperPluginYaml {
     }
 }
 
-hangarPublish {
-    publications.register("plugin") {
-        version = project.version as String // use project version as publication version
-        id = "PolarPaper"
-        channel = "Development"
 
-        // your api key.
-        // defaults to the `io.papermc.hangar-publish-plugin.[publicationName].api-key` or `io.papermc.hangar-publish-plugin.default-api-key` Gradle properties
-        apiKey = System.getenv("HANGAR_API_KEY")
-
-        // register platforms
-        platforms {
-            paper {
-                jar = tasks.jar.flatMap { it.archiveFile }
-                platformVersions = listOf(libs.versions.minecraft.get())
-            }
+configurations.configureEach {
+    resolutionStrategy.eachDependency {
+        if (requested.group == "net.fabricmc" && requested.name == "tiny-remapper") {
+            useVersion("0.14.0")
         }
     }
+}
+
+val acceptance by sourceSets.creating {
+    java.srcDir("integration-tests/src")
+    resources.srcDir("integration-tests/resources")
+    compileClasspath += sourceSets.main.get().output + sourceSets.main.get().compileClasspath
+}
+
+tasks.register<Jar>("acceptanceJar") {
+    dependsOn(acceptance.classesTaskName)
+    from(acceptance.output)
+    archiveFileName.set("polarpaper-acceptance.jar")
+    destinationDirectory.set(layout.buildDirectory.dir("acceptance"))
+}
+
+tasks.register<Sync>("stagePlugin") {
+    dependsOn("reobfJar")
+    from(layout.buildDirectory.file("libs/${project.name}-${project.version}-reobf.jar"))
+    into(layout.projectDirectory.dir("dist"))
+}
+
+tasks.named("build") {
+    dependsOn("stagePlugin")
 }

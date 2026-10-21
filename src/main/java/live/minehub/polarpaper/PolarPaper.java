@@ -1,8 +1,5 @@
 package live.minehub.polarpaper;
 
-import io.papermc.paper.command.brigadier.Commands;
-import io.papermc.paper.plugin.lifecycle.event.LifecycleEventManager;
-import io.papermc.paper.plugin.lifecycle.event.types.LifecycleEvents;
 import live.minehub.polarpaper.commands.CommandManager;
 import live.minehub.polarpaper.core.config.Config;
 import live.minehub.polarpaper.core.generator.PolarGenerator;
@@ -12,9 +9,7 @@ import live.minehub.polarpaper.core.util.ShutdownExecutor;
 import live.minehub.polarpaper.util.Format;
 import live.minehub.polarpaper.util.WorldKey;
 import org.bukkit.World;
-import org.bukkit.plugin.Plugin;
 import org.bukkit.plugin.java.JavaPlugin;
-import org.jetbrains.annotations.NotNull;
 
 import java.io.File;
 import java.io.IOException;
@@ -37,6 +32,11 @@ public final class PolarPaper extends JavaPlugin {
 
     @Override
     public void onEnable() {
+        if (!getServer().getMinecraftVersion().equals("1.20.1")) {
+            getLogger().severe("This branch requires Paper 1.20.1 and Java 25.");
+            getServer().getPluginManager().disablePlugin(this);
+            return;
+        }
         registerCommands();
         registerEvents();
 
@@ -120,12 +120,12 @@ public final class PolarPaper extends JavaPlugin {
     }
 
     public static Path getConfigPath() {
-        Path pluginFolder = PolarPaper.getPlugin().getDataPath();
+        Path pluginFolder = PolarPaper.getPlugin().getDataFolder().toPath();
         return pluginFolder.resolve("config.yml");
     }
 
     public static Path getWorldsPath() {
-        Path pluginFolder = PolarPaper.getPlugin().getDataPath();
+        Path pluginFolder = PolarPaper.getPlugin().getDataFolder().toPath();
         return pluginFolder.resolve("worlds");
     }
 
@@ -136,11 +136,7 @@ public final class PolarPaper extends JavaPlugin {
     }
 
     public static void registerCommands() {
-        LifecycleEventManager<@NotNull Plugin> manager = getPlugin().getLifecycleManager();
-        manager.registerEventHandler(LifecycleEvents.COMMANDS, event -> {
-            Commands commands = event.registrar();
-            new CommandManager().register(commands);
-        });
+        new CommandManager().register();
     }
 
     public static void loadStartupWorlds() throws IOException {

@@ -4,8 +4,8 @@ import com.mojang.brigadier.Command;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import com.mojang.brigadier.context.CommandContext;
-import io.papermc.paper.command.brigadier.CommandSourceStack;
-import io.papermc.paper.command.brigadier.Commands;
+import net.minecraft.commands.CommandSourceStack;
+import net.minecraft.commands.Commands;
 import live.minehub.polarpaper.core.generator.PolarGenerator;
 import live.minehub.polarpaper.util.WorldKey;
 import net.kyori.adventure.text.Component;
@@ -29,25 +29,25 @@ public class RenameCommand extends PolarCmd {
 
     private static int run(CommandContext<CommandSourceStack> ctx) {
         String worldPath = ctx.getArgument("world name", String.class);
-        Path path = WorldKey.validatePath(ctx.getSource().getSender(), worldPath);
+        Path path = WorldKey.validatePath(ctx.getSource().getBukkitSender(), worldPath);
         if (path == null) return Command.SINGLE_SUCCESS;
         if (!Files.exists(path)) {
-            ctx.getSource().getSender().sendMessage(Component.text("File '" + path.getFileName() + "' does not exist", NamedTextColor.RED));
+            ctx.getSource().getBukkitSender().sendMessage(Component.text("File '" + path.getFileName() + "' does not exist", NamedTextColor.RED));
             return Command.SINGLE_SUCCESS;
         }
 
         String oldName = WorldKey.getWorldName(path);
         String newWorldName = ctx.getArgument("new world name", String.class);
-        if (WorldKey.validatePath(ctx.getSource().getSender(), newWorldName) == null) return Command.SINGLE_SUCCESS;
+        if (WorldKey.validatePath(ctx.getSource().getBukkitSender(), newWorldName) == null) return Command.SINGLE_SUCCESS;
 
         World bukkitWorld = WorldKey.getWorld(oldName);
         if (bukkitWorld != null) {
             PolarGenerator polarGenerator = PolarGenerator.fromWorld(bukkitWorld);
             if (polarGenerator == null) {
-                ctx.getSource().getSender().sendMessage(
+                ctx.getSource().getBukkitSender().sendMessage(
                         Component.text()
                                 .append(Component.text("Not renaming non-polar world '", NamedTextColor.RED))
-                                .append(Component.text(bukkitWorld.getWorldPath().toString(), NamedTextColor.RED))
+                                .append(Component.text(bukkitWorld.getWorldFolder().toPath().toString(), NamedTextColor.RED))
                                 .append(Component.text("'", NamedTextColor.RED))
                 );
             } else {
@@ -66,13 +66,13 @@ public class RenameCommand extends PolarCmd {
     }
 
     private static void renameWorld(CommandContext<CommandSourceStack> ctx, Path worldPath, String oldName, String newName) {
-        Path newPath = WorldKey.validatePath(ctx.getSource().getSender(), newName);
+        Path newPath = WorldKey.validatePath(ctx.getSource().getBukkitSender(), newName);
         if (newPath == null) return;
 
         try {
             Files.move(worldPath, newPath, StandardCopyOption.REPLACE_EXISTING);
 
-            ctx.getSource().getSender().sendMessage(
+            ctx.getSource().getBukkitSender().sendMessage(
                     Component.text()
                             .append(Component.text("Renamed '", NamedTextColor.AQUA))
                             .append(Component.text(oldName, NamedTextColor.AQUA))
@@ -83,7 +83,7 @@ public class RenameCommand extends PolarCmd {
         } catch (IOException e) {
             LOGGER.error("Failed to rename world: " + oldName, e);
 
-            ctx.getSource().getSender().sendMessage(
+            ctx.getSource().getBukkitSender().sendMessage(
                     Component.text()
                             .append(Component.text("Failed to rename '", NamedTextColor.RED))
                             .append(Component.text(oldName, NamedTextColor.RED))
@@ -94,7 +94,7 @@ public class RenameCommand extends PolarCmd {
 
     @Override
     protected int executeDefault(CommandContext<CommandSourceStack> ctx) {
-        ctx.getSource().getSender().sendMessage(
+        ctx.getSource().getBukkitSender().sendMessage(
                 Component.text()
                         .append(Component.text("Usage: /polar rename <worldname>", NamedTextColor.RED))
         );

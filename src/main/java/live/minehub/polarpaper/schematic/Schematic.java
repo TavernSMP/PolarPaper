@@ -16,7 +16,7 @@ import net.minecraft.world.level.block.state.BlockState;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.NamespacedKey;
-import org.bukkit.craftbukkit.block.data.CraftBlockData;
+import org.bukkit.craftbukkit.v1_20_R1.block.data.CraftBlockData;
 import org.joml.Vector2i;
 import org.joml.Vector3i;
 import org.slf4j.Logger;

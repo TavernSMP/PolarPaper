@@ -24,8 +24,8 @@ public class WorldEditUtil {
             BlockVector3 min = selection.getMinimumPoint();
             BlockVector3 max = selection.getMaximumPoint();
             return new Selection(
-                    new Vector3i(min.x(), min.y(), min.z()),
-                    new Vector3i(max.x(), max.y(), max.z())
+                    new Vector3i(min.getBlockX(), min.getBlockY(), min.getBlockZ()),
+                    new Vector3i(max.getBlockX(), max.getBlockY(), max.getBlockZ())
             );
         } catch (IncompleteRegionException e) {
             return null;

@@ -1,6 +1,6 @@
 package live.minehub.polarpaper.core.generator;
 
-import ca.spottedleaf.moonrise.patches.starlight.light.SWMRNibbleArray;
+import ca.spottedleaf.starlight.common.light.SWMRNibbleArray;
 import live.minehub.polarpaper.core.config.Config;
 import live.minehub.polarpaper.core.source.PolarSource;
 import live.minehub.polarpaper.core.userdata.WorldUserData;
@@ -16,7 +16,7 @@ import net.minecraft.world.level.chunk.LevelChunkSection;
 import net.minecraft.world.level.chunk.UpgradeData;
 import net.minecraft.world.ticks.LevelChunkTicks;
 import org.bukkit.World;
-import org.bukkit.craftbukkit.CraftWorld;
+import org.bukkit.craftbukkit.v1_20_R1.CraftWorld;
 import org.jetbrains.annotations.Nullable;
 import org.joml.Vector3i;
 import org.slf4j.Logger;
@@ -85,6 +85,7 @@ public class PolarStreamLoader extends PolarGenerator {
                 PolarConstants.validatePolarVersion(version);
 
                 this.dataVersion = reader.readVarInt();
+                dataConverter.validateDataVersion(this.dataVersion);
 
                 var compressionByte = reader.readByte();
                 PolarWorld.CompressionType compression = PolarWorld.CompressionType.fromId(compressionByte);
@@ -176,10 +177,10 @@ public class PolarStreamLoader extends PolarGenerator {
 
         return TaskFutures.runRegion(getWorldAccess().getPlugin(), world, chunkX, chunkZ, () -> {
             if (finalLightPresent) {
-                newLevelChunk.starlight$setBlockEmptinessMap(emptinessMap);
-                newLevelChunk.starlight$setSkyEmptinessMap(emptinessMap);
-                newLevelChunk.starlight$setSkyNibbles(skyNibbles);
-                newLevelChunk.starlight$setBlockNibbles(blockNibbles);
+                newLevelChunk.setBlockEmptinessMap(emptinessMap);
+                newLevelChunk.setSkyEmptinessMap(emptinessMap);
+                newLevelChunk.setSkyNibbles(skyNibbles);
+                newLevelChunk.setBlockNibbles(blockNibbles);
             } else {
                 ChunkUtils.lightChunk(serverLevel, newLevelChunk);
             }

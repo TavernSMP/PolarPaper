@@ -1,6 +1,6 @@
 package live.minehub.polarpaper.core.util;
 
-import ca.spottedleaf.moonrise.patches.starlight.light.SWMRNibbleArray;
+import ca.spottedleaf.starlight.common.light.SWMRNibbleArray;
 import live.minehub.polarpaper.core.world.PolarSection;
 import net.minecraft.world.level.chunk.DataLayer;
 import org.jetbrains.annotations.Nullable;

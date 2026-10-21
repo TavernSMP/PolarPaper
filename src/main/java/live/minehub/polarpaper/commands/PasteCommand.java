@@ -4,8 +4,8 @@ import com.mojang.brigadier.Command;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import com.mojang.brigadier.context.CommandContext;
-import io.papermc.paper.command.brigadier.CommandSourceStack;
-import io.papermc.paper.command.brigadier.Commands;
+import net.minecraft.commands.CommandSourceStack;
+import net.minecraft.commands.Commands;
 import live.minehub.polarpaper.PolarPaper;
 import live.minehub.polarpaper.core.source.FilePolarSource;
 import live.minehub.polarpaper.core.source.PolarSource;
@@ -36,9 +36,9 @@ public class PasteCommand extends PolarCmd {
     }
 
     private static int run(CommandContext<CommandSourceStack> ctx) {
-        CommandSender sender = ctx.getSource().getSender();
+        CommandSender sender = ctx.getSource().getBukkitSender();
         if (!(sender instanceof Player)) {
-            ctx.getSource().getSender().sendMessage(
+            ctx.getSource().getBukkitSender().sendMessage(
                     Component.text()
                             .append(Component.text("Usage: /polar paste <world> [rotation] (while in a world)", NamedTextColor.RED))
             );
@@ -49,9 +49,9 @@ public class PasteCommand extends PolarCmd {
     }
 
     protected static int runWithRotation(CommandContext<CommandSourceStack> ctx) {
-        CommandSender sender = ctx.getSource().getSender();
+        CommandSender sender = ctx.getSource().getBukkitSender();
         if (!(sender instanceof Player)) {
-            ctx.getSource().getSender().sendMessage(
+            ctx.getSource().getBukkitSender().sendMessage(
                     Component.text()
                             .append(Component.text("Usage: /polar paste <world> [rotation] (while in a world)", NamedTextColor.RED))
             );
@@ -62,7 +62,7 @@ public class PasteCommand extends PolarCmd {
 
         Rotation rotation = Rotation.fromFriendlyName(rotationString.toLowerCase());
         if (rotation == null) {
-            ctx.getSource().getSender().sendMessage(Component.text("Invalid rotation '" + rotationString + "'", NamedTextColor.RED));
+            ctx.getSource().getBukkitSender().sendMessage(Component.text("Invalid rotation '" + rotationString + "'", NamedTextColor.RED));
             return Command.SINGLE_SUCCESS;
         }
 
@@ -70,9 +70,9 @@ public class PasteCommand extends PolarCmd {
     }
 
     protected static int runWithRotationAndAirIgnore(CommandContext<CommandSourceStack> ctx) {
-        CommandSender sender = ctx.getSource().getSender();
+        CommandSender sender = ctx.getSource().getBukkitSender();
         if (!(sender instanceof Player)) {
-            ctx.getSource().getSender().sendMessage(
+            ctx.getSource().getBukkitSender().sendMessage(
                     Component.text()
                             .append(Component.text("Usage: /polar paste <world> [rotation] [air ignore] (while in a world)", NamedTextColor.RED))
             );
@@ -83,7 +83,7 @@ public class PasteCommand extends PolarCmd {
 
         Rotation rotation = Rotation.fromFriendlyName(rotationString.toLowerCase());
         if (rotation == null) {
-            ctx.getSource().getSender().sendMessage(Component.text("Invalid rotation '" + rotationString + "'", NamedTextColor.RED));
+            ctx.getSource().getBukkitSender().sendMessage(Component.text("Invalid rotation '" + rotationString + "'", NamedTextColor.RED));
             return Command.SINGLE_SUCCESS;
         }
 
@@ -93,22 +93,22 @@ public class PasteCommand extends PolarCmd {
             Schematic.IgnoreAir ignoreAir = Schematic.IgnoreAir.valueOf(ignoreAirString.toUpperCase());
             return paste(ctx, rotation, ignoreAir);
         } catch (IllegalArgumentException _) {
-            ctx.getSource().getSender().sendMessage(Component.text("Invalid air ignore '" + ignoreAirString + "'", NamedTextColor.RED));
+            ctx.getSource().getBukkitSender().sendMessage(Component.text("Invalid air ignore '" + ignoreAirString + "'", NamedTextColor.RED));
             return Command.SINGLE_SUCCESS;
         }
     }
 
     private static int paste(CommandContext<CommandSourceStack> ctx, Rotation rotation, Schematic.IgnoreAir ignoreAir) {
-        if (!(ctx.getSource().getSender() instanceof Player player)) return Command.SINGLE_SUCCESS;
+        if (!(ctx.getSource().getBukkitSender() instanceof Player player)) return Command.SINGLE_SUCCESS;
 
         long before = System.nanoTime();
 
         String worldName = ctx.getArgument("world name", String.class);
 
         // newWorldName becomes a file name, so it must not be able to go outside the worlds folder
-        if (WorldKey.validatePath(ctx.getSource().getSender(), worldName) == null) return Command.SINGLE_SUCCESS;
+        if (WorldKey.validatePath(ctx.getSource().getBukkitSender(), worldName) == null) return Command.SINGLE_SUCCESS;
 
-        Path pluginFolder = PolarPaper.getPlugin().getDataPath();
+        Path pluginFolder = PolarPaper.getPlugin().getDataFolder().toPath();
         Path worldsFolder = pluginFolder.resolve("worlds");
         Path path = worldsFolder.resolve(worldName);
 
@@ -143,12 +143,12 @@ public class PasteCommand extends PolarCmd {
         } catch (Exception e) {
             String errorMsg = "Failed to paste schematic, please check logs for error";
             LOGGER.error(errorMsg, e);
-            ctx.getSource().getSender().sendMessage(Component.text(errorMsg, NamedTextColor.RED));
+            ctx.getSource().getBukkitSender().sendMessage(Component.text(errorMsg, NamedTextColor.RED));
             return Command.SINGLE_SUCCESS;
         }
 
         int ms = (int) ((System.nanoTime() - before) / 1_000_000);
-        ctx.getSource().getSender().sendMessage(
+        ctx.getSource().getBukkitSender().sendMessage(
                 Component.text()
                         .append(Component.text("Pasted '", NamedTextColor.AQUA))
                         .append(Component.text(worldName, NamedTextColor.AQUA))
@@ -162,7 +162,7 @@ public class PasteCommand extends PolarCmd {
 
     @Override
     protected int executeDefault(CommandContext<CommandSourceStack> ctx) {
-        ctx.getSource().getSender().sendMessage(
+        ctx.getSource().getBukkitSender().sendMessage(
                 Component.text()
                         .append(Component.text("Usage: /polar paste <worldname> [rotation] [air ignore] (While in a world) to place a polar world at your current position", NamedTextColor.RED))
         );

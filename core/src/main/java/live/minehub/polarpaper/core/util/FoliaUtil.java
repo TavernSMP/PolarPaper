@@ -21,7 +21,15 @@ public class FoliaUtil {
             return;
         }
 
-        if (!isFolia() || Bukkit.isOwnedByCurrentRegion(entity)) {
+        if (!isFolia()) {
+            if (Bukkit.isPrimaryThread()) {
+                runnable.run();
+            } else {
+                Bukkit.getScheduler().runTask(plugin, runnable);
+            }
+            return;
+        }
+        if (Bukkit.isOwnedByCurrentRegion(entity)) {
             runnable.run();
             return;
         }
@@ -38,8 +46,10 @@ public class FoliaUtil {
 
         if (isFolia()) {
             Bukkit.getRegionScheduler().execute(plugin, world, chunkX, chunkZ, runnable);
-        } else {
+        } else if (Bukkit.isPrimaryThread()) {
             runnable.run();
+        } else {
+            Bukkit.getScheduler().runTask(plugin, runnable);
         }
     }
 
